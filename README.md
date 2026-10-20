@@ -1,4 +1,4 @@
-# 💧 Opéra Épiclesse — Furina P2P & Offline Chess
+# 💧 Furina chess — Furina P2P & Offline Chess
 
 A feature-rich, serverless, peer-to-peer and offline multiplayer chess web application inspired by **Lady Furina** (Fontaine Hydro Archon from *Genshin Impact*). Built entirely with vanilla HTML5, CSS3, JavaScript, and external CDNs. It can be hosted directly on **GitHub Pages** with **zero backend server infrastructure**.
 
