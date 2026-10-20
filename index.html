@@ -3,873 +3,577 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Opéra Épiclesse — Furina P2P & Offline Chess</title>
+  <title>Furina Chess — Opéra Épiclesse</title>
   
-  <!-- Favicon: Water droplet motif -->
+  <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
 
-  <!-- Google Fonts: Cinzel (Regal Fontaine Opera serif) & Plus Jakarta Sans -->
+  <!-- Fonts: Inter / Plus Jakarta Sans for ultra-clean UI & Cinzel for subtle Furina branding -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
-  <!-- FontAwesome 6 (CDN) -->
+  <!-- FontAwesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Chessboard.js CSS (CDN) -->
+  <!-- Chessboard.js CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 
-  <!-- TailwindCSS (CDN) -->
+  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          colors: {
-            fontaine: {
-              950: '#050c18',
-              900: '#091528',
-              850: '#0d1e38',
-              800: '#132a4e',
-              700: '#1a3a6b',
-              600: '#234d8d',
-              accent: '#38bdf8',
-              hydro: '#00d2ff',
-              gold: '#f5d061',
-              goldHover: '#e5be49',
-              goldDark: '#b88924',
-              pearl: '#e6f4fa'
-            }
-          },
           fontFamily: {
-            opera: ['"Cinzel"', 'serif'],
-            operaDeco: ['"Cinzel Decorative"', 'serif'],
-            sans: ['"Plus Jakarta Sans"', 'sans-serif']
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            opera: ['"Cinzel"', 'serif']
           },
-          boxShadow: {
-            'hydro-glow': '0 0 25px rgba(0, 210, 255, 0.35)',
-            'gold-glow': '0 0 25px rgba(245, 208, 97, 0.35)',
-            'theatre': '0 10px 40px -10px rgba(0, 10, 30, 0.9)'
+          colors: {
+            surface: {
+              950: '#0b0e14',
+              900: '#111620',
+              850: '#151b26',
+              800: '#1b2331',
+              700: '#263143',
+              600: '#344359'
+            },
+            hydro: {
+              400: '#38bdf8',
+              500: '#00d2ff',
+              600: '#0284c7'
+            },
+            gold: {
+              400: '#f5d061',
+              500: '#e5be49',
+              600: '#ca9a24'
+            }
           }
         }
       }
     }
   </script>
 
-  <!-- Custom Fontaine & Chessboard Styles -->
+  <!-- Custom Styles -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-fontaine-950 text-fontaine-pearl font-sans min-h-screen flex flex-col selection:bg-fontaine-hydro selection:text-fontaine-950 antialiased overflow-x-hidden relative">
+<body class="bg-surface-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-hydro-500 selection:text-surface-950 antialiased overflow-x-hidden">
 
-  <!-- Background Decorative Hydro Caustics & Vignette -->
-  <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute inset-0 bg-radial-vignette opacity-80"></div>
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[350px] bg-gradient-to-b from-cyan-600/15 via-blue-900/10 to-transparent blur-3xl"></div>
-    <div class="hydro-particles"></div>
-  </div>
+  <!-- Minimalist Top Navigation Bar (Chess.com style: slim & sleek) -->
+  <header class="h-12 border-b border-white/[0.06] bg-surface-900/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-3">
+      <!-- Furina Hydro Icon & Brand -->
+      <a href="." class="flex items-center gap-2 group">
+        <span class="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-700 to-hydro-500 flex items-center justify-center text-white text-xs shadow-sm">
+          <i class="fa-solid fa-water"></i>
+        </span>
+        <span class="font-opera text-sm font-bold tracking-wider text-slate-100 group-hover:text-hydro-400 transition">
+          OPÉRA ÉPICLESSE
+        </span>
+      </a>
 
-  <!-- Royal Opera Top Bar -->
-  <header class="relative z-10 border-b border-fontaine-700/60 bg-fontaine-900/85 backdrop-blur-md px-3 sm:px-8 py-3 transition-all">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      
-      <!-- Brand & Furina Crest -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-fontaine-gold via-cyan-400 to-blue-700 p-0.5 shadow-hydro-glow flex items-center justify-center shrink-0">
-          <div class="w-full h-full bg-fontaine-900 rounded-full flex items-center justify-center text-fontaine-gold text-lg sm:text-xl">
-            <i class="fa-solid fa-water"></i>
-          </div>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-operaDeco text-base sm:text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-fontaine-pearl via-fontaine-gold to-cyan-300">
-              OPÉRA ÉPICLESSE
-            </span>
-            <span class="hidden md:inline-block px-2 py-0.5 text-[10px] tracking-widest font-semibold uppercase bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 rounded-full">
-              P2P & Offline Duel
-            </span>
-          </div>
-          <p class="text-[11px] sm:text-xs text-slate-400 tracking-wide font-opera">
-            Furina's Stage of Judgement & Intellectual Drama
-          </p>
-        </div>
+      <!-- Compact Active Mode & Turn Indicator Pill -->
+      <div id="connectionPill" class="hidden sm:flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-800 text-slate-300 border border-white/5">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        <span id="connectionPillText" class="text-[11px]">Ready to Play</span>
       </div>
+    </div>
 
-      <!-- Quick Action Controls & Sound Settings -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5">
-        
-        <!-- Background Music Player Toggle -->
-        <button id="bgMusicToggleBtn" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-fontaine-850 hover:bg-fontaine-800 border border-fontaine-700 text-fontaine-pearl hover:text-cyan-300 text-xs sm:text-sm font-medium transition flex items-center gap-1.5" title="Toggle Fontaine Theatrical Waltz Music">
-          <i id="bgMusicIcon" class="fa-solid fa-music text-cyan-400"></i>
-          <span class="hidden sm:inline" id="bgMusicLabel">Waltz Off</span>
-        </button>
+    <!-- Header Actions -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Background Fontaine Waltz Music Toggle -->
+      <button id="bgMusicToggleBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-hydro-400 text-xs font-medium transition flex items-center gap-1.5" title="Toggle Background Music">
+        <i id="bgMusicIcon" class="fa-solid fa-music text-hydro-400 text-xs"></i>
+        <span class="hidden md:inline text-[11px]" id="bgMusicLabel">Waltz</span>
+      </button>
 
-        <!-- Sound FX & Theme Settings Modal Button -->
-        <button id="soundSettingsBtn" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-fontaine-850 hover:bg-fontaine-800 border border-fontaine-700 text-fontaine-pearl hover:text-fontaine-gold text-xs sm:text-sm font-medium transition flex items-center gap-1.5" title="Audio & Theme Settings">
-          <i id="soundIcon" class="fa-solid fa-volume-high text-fontaine-gold"></i>
-          <span class="hidden sm:inline">Sounds</span>
-        </button>
+      <!-- Sound Settings Toggle -->
+      <button id="soundSettingsBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-gold-400 text-xs font-medium transition flex items-center gap-1.5" title="Audio Settings">
+        <i id="soundIcon" class="fa-solid fa-volume-high text-xs"></i>
+      </button>
 
-        <!-- Theatrical Help / Story Modal Toggle -->
-        <button id="helpModalBtn" class="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-fontaine-850 hover:bg-fontaine-800 border border-fontaine-700 text-fontaine-pearl hover:text-fontaine-gold text-xs sm:text-sm font-medium transition flex items-center gap-1.5" title="Court Protocol & Guides">
-          <i class="fa-solid fa-circle-info text-cyan-300"></i>
-          <span class="hidden sm:inline">Court Protocol</span>
-        </button>
+      <!-- Protocol / Help Info Modal -->
+      <button id="helpModalBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs font-medium transition flex items-center gap-1.5" title="Court Protocol">
+        <i class="fa-solid fa-circle-question text-xs"></i>
+      </button>
 
-        <!-- Reset / New Duel Button -->
-        <button id="navNewGameBtn" class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold text-fontaine-950 hover:brightness-110 font-opera font-bold text-xs sm:text-sm tracking-wide transition shadow-sm flex items-center gap-1.5">
-          <i class="fa-solid fa-plus text-xs"></i>
-          <span>New Duel</span>
-        </button>
-      </div>
-
+      <!-- New Game Button -->
+      <button id="navNewGameBtn" class="px-3 py-1 rounded-md bg-hydro-500 hover:bg-hydro-400 text-surface-950 text-xs font-bold font-sans transition flex items-center gap-1">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span>New</span>
+      </button>
     </div>
   </header>
 
-  <!-- Main Theatrical Stage Container -->
-  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 flex flex-col justify-start">
-
-    <!-- GAME MODE SELECTOR BAR -->
-    <div class="mb-4 p-1.5 rounded-2xl bg-fontaine-900/90 border border-fontaine-700/60 backdrop-blur-md flex flex-wrap items-center justify-between gap-2 shadow-md">
-      <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 custom-scrollbar">
-        <!-- Online P2P Mode -->
-        <button class="mode-tab-btn active" data-mode="online">
-          <i class="fa-solid fa-globe text-cyan-400 mr-1.5"></i>
-          <span>Online P2P (WebRTC)</span>
-        </button>
-        <!-- Offline Pass & Play -->
-        <button class="mode-tab-btn" data-mode="offline_local">
-          <i class="fa-solid fa-users text-fontaine-gold mr-1.5"></i>
-          <span>Pass & Play (Offline)</span>
-        </button>
-        <!-- Offline Bluetooth -->
-        <button class="mode-tab-btn" data-mode="bluetooth">
-          <i class="fa-brands fa-bluetooth-b text-blue-400 mr-1.5"></i>
-          <span>Bluetooth Duel (Offline)</span>
-        </button>
-        <!-- Offline Multi-Tab Broadcast -->
-        <button class="mode-tab-btn" data-mode="offline_tab">
-          <i class="fa-solid fa-table-columns text-emerald-400 mr-1.5"></i>
-          <span>Dual Window (Same PC)</span>
-        </button>
-      </div>
-
-      <!-- Active Mode Indicator Badge -->
-      <div id="activeModeBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
-        <i class="fa-solid fa-circle-dot text-[9px] animate-pulse"></i>
-        <span id="activeModeBadgeText">Mode: Online P2P</span>
-      </div>
-    </div>
-
-    <!-- Theatrical Dramatic Quote Ribbon -->
-    <div id="furinaQuoteRibbon" class="mb-5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fontaine-900/90 via-fontaine-850/90 to-fontaine-900/90 border border-cyan-500/30 flex items-center justify-between text-xs sm:text-sm shadow-md">
-      <div class="flex items-center gap-2.5 overflow-hidden">
-        <span class="text-fontaine-gold text-sm animate-pulse"><i class="fa-solid fa-masks-theater"></i></span>
-        <span class="font-opera text-cyan-300 font-semibold tracking-wide shrink-0">Lady Furina:</span>
-        <span id="furinaQuoteText" class="italic text-slate-300 truncate">
-          "The curtains are drawn! Let us see what drama you can orchestrate upon the 64 squares."
-        </span>
-      </div>
-      <div id="connectionPill" class="shrink-0 flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/40 text-amber-300">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-        <span id="connectionPillText">Awaiting Stage</span>
-      </div>
-    </div>
-
-    <!-- Dual Setup Banner / Lobby Cards (Visible when not actively playing) -->
-    <div id="lobbySection" class="mb-6 space-y-4">
+  <!-- Main Game Workspace: Pure Minimalist Layout (Large Board + Unified Sidebar) -->
+  <main class="flex-1 max-w-[1700px] w-full mx-auto px-2 sm:px-4 py-2 sm:py-4 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 lg:gap-8">
+    
+    <!-- LEFT: The Grand Chessboard Section (Maximized Size, Clean, Unboxed) -->
+    <section class="flex flex-col items-center w-full max-w-[min(84vh,780px)] shrink-0">
       
-      <!-- TIME CONTROL SELECTOR -->
-      <div class="card-fontaine p-4 sm:p-5 rounded-2xl">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <!-- Opponent Info Bar (Sleek, Unboxed Inline Strip) -->
+      <div id="opponentBanner" class="w-full py-1.5 px-1 flex items-center justify-between text-xs select-none">
+        <div class="flex items-center gap-2.5">
+          <div id="opponentAvatar" class="w-8 h-8 rounded-md bg-surface-800 flex items-center justify-center text-slate-300 text-sm">
+            <i class="fa-solid fa-user"></i>
+          </div>
           <div>
-            <h3 class="font-opera text-sm font-bold text-fontaine-gold flex items-center gap-2">
-              <i class="fa-solid fa-stopwatch text-cyan-400"></i> Court Duel Chronometer (Timer Preset)
-            </h3>
-            <p class="text-xs text-slate-300 mt-0.5">Select time control for both sovereigns:</p>
+            <div class="flex items-center gap-1.5">
+              <span id="opponentName" class="font-bold text-slate-200 text-sm">Challenger</span>
+              <span id="opponentColorBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-800 text-slate-400">Black</span>
+              <span id="opponentTurnBadge" class="hidden text-[10px] text-hydro-400 font-semibold items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-hydro-400 animate-pulse"></span> thinking
+              </span>
+            </div>
+            <!-- Opponent Captured pieces & score -->
+            <div id="opponentCapturedContainer" class="flex items-center gap-1 text-[11px] text-slate-400 min-h-[16px]">
+              <span id="opponentCapturedPieces" class="tracking-tighter"></span>
+              <span id="opponentScoreAdvantage" class="font-bold text-gold-400 ml-1"></span>
+            </div>
           </div>
-          
-          <div class="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <button class="timer-select-btn" data-time="0" data-inc="0">No Clock</button>
-            <button class="timer-select-btn" data-time="60" data-inc="0">1 min (Bullet)</button>
-            <button class="timer-select-btn active" data-time="180" data-inc="2">3+2 Blitz</button>
-            <button class="timer-select-btn" data-time="300" data-inc="0">5 min Blitz</button>
-            <button class="timer-select-btn" data-time="600" data-inc="0">10 min Rapid</button>
-            <button class="timer-select-btn" data-time="900" data-inc="10">15+10 Classical</button>
-          </div>
+        </div>
+
+        <!-- Opponent Digital Clock (Chess.com Minimalist Dark Badge) -->
+        <div id="opponentClockWrapper" class="chess-clock">
+          <span id="opponentClockTime" class="font-mono font-bold text-base sm:text-lg">03:00</span>
         </div>
       </div>
 
-      <!-- 1. ONLINE P2P LOBBY (HOST / JOIN) -->
-      <div id="onlineLobbyGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-        
-        <!-- HOST CARD -->
-        <div id="hostCard" class="card-fontaine p-5 sm:p-6 rounded-2xl relative overflow-hidden transition-all duration-300">
-          <div class="corner-gold-tl"></div>
-          <div class="corner-gold-br"></div>
-          
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-9 h-9 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
-              <i class="fa-solid fa-crown text-base"></i>
-            </div>
-            <div>
-              <h2 class="font-opera text-lg font-bold text-fontaine-pearl tracking-wide">Command the Stage (Host)</h2>
-              <p class="text-xs text-slate-400">Play as White with the first turn.</p>
-            </div>
+      <!-- The Board Itself (Large, Razor-sharp, Clean) -->
+      <div class="w-full aspect-square relative rounded-md overflow-hidden shadow-2xl bg-surface-900 border border-white/[0.08]">
+        <div id="chessBoard" class="w-full h-full"></div>
+
+        <!-- Floating Minimal Check Alert -->
+        <div id="floatingCheckBanner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-rose-600/95 text-white text-xs font-bold shadow-lg animate-bounce items-center gap-1.5 pointer-events-none">
+          <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+          <span id="floatingCheckText">Check!</span>
+        </div>
+      </div>
+
+      <!-- Self Info Bar (Sleek, Unboxed Inline Strip) -->
+      <div id="selfBanner" class="w-full py-1.5 px-1 flex items-center justify-between text-xs select-none">
+        <div class="flex items-center gap-2.5">
+          <div id="selfAvatar" class="w-8 h-8 rounded-md bg-hydro-500/20 text-hydro-400 flex items-center justify-center text-sm border border-hydro-500/30">
+            <i class="fa-solid fa-chess-queen"></i>
           </div>
-
-          <p class="text-xs text-slate-300 mb-4 leading-relaxed">
-            Create an encrypted WebRTC room. Share your unique link with a challenger to begin the trial instantly.
-          </p>
-
-          <div id="hostInitialActions">
-            <button id="createGameBtn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-fontaine-950 font-bold font-opera tracking-wider text-sm shadow-hydro-glow transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
-              <span>CREATE GAME (HOST STAGE)</span>
-            </button>
-          </div>
-
-          <div id="hostLinkBox" class="hidden space-y-3">
-            <div class="flex items-center justify-between text-xs text-cyan-300 font-medium">
-              <span class="flex items-center gap-1.5">
-                <i class="fa-solid fa-link text-fontaine-gold"></i> Share Invitation Link
-              </span>
-              <span id="hostPeerBadge" class="font-mono text-[11px] text-slate-400 bg-fontaine-950/70 px-2 py-0.5 rounded border border-fontaine-700">
-                Generating ID...
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span id="selfName" class="font-bold text-slate-200 text-sm">You (Lady Furina)</span>
+              <span id="selfColorBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-hydro-500/20 text-hydro-300">White</span>
+              <span id="selfTurnBadge" class="text-[10px] text-emerald-400 font-semibold items-center gap-1 flex">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> your move
               </span>
             </div>
-
-            <div class="flex items-center gap-2">
-              <input id="shareLinkInput" type="text" readonly value="Generating stage invite..." class="w-full bg-fontaine-950/90 border border-cyan-500/40 rounded-xl px-3.5 py-2.5 text-xs text-cyan-200 font-mono tracking-tight focus:outline-none focus:ring-1 focus:ring-cyan-400">
-              <button id="copyLinkBtn" class="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold hover:brightness-110 text-fontaine-950 font-bold text-xs tracking-wide transition flex items-center gap-1.5 shadow-sm">
-                <i id="copyIcon" class="fa-solid fa-copy"></i>
-                <span id="copyBtnText">Copy Link</span>
-              </button>
-              <button id="showQrBtn" class="shrink-0 p-2.5 rounded-xl bg-fontaine-800 hover:bg-fontaine-700 border border-fontaine-600 text-fontaine-pearl text-xs transition" title="Show QR Code">
-                <i class="fa-solid fa-qrcode text-base"></i>
-              </button>
-            </div>
-
-            <div class="flex items-center gap-2 text-xs text-amber-300/90 bg-amber-950/30 border border-amber-600/30 px-3 py-2 rounded-xl animate-pulse">
-              <i class="fa-solid fa-spinner fa-spin"></i>
-              <span>Awaiting opponent connection via link...</span>
+            <!-- Self Captured pieces & score -->
+            <div id="selfCapturedContainer" class="flex items-center gap-1 text-[11px] text-slate-400 min-h-[16px]">
+              <span id="selfCapturedPieces" class="tracking-tighter"></span>
+              <span id="selfScoreAdvantage" class="font-bold text-gold-400 ml-1"></span>
             </div>
           </div>
         </div>
 
-        <!-- JOIN CARD -->
-        <div id="joinCard" class="card-fontaine p-5 sm:p-6 rounded-2xl relative overflow-hidden transition-all duration-300">
-          <div class="corner-gold-tl"></div>
-          <div class="corner-gold-br"></div>
+        <!-- Self Digital Clock -->
+        <div id="selfClockWrapper" class="chess-clock active-clock">
+          <span id="selfClockTime" class="font-mono font-bold text-base sm:text-lg">03:00</span>
+        </div>
+      </div>
 
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-9 h-9 rounded-lg bg-blue-950 border border-blue-500/40 flex items-center justify-center text-blue-300">
-              <i class="fa-solid fa-shield-halved text-base"></i>
-            </div>
-            <div>
-              <h2 class="font-opera text-lg font-bold text-fontaine-pearl tracking-wide">Enter the Arena (Challenger)</h2>
-              <p class="text-xs text-slate-400">Play as Black with board flipped.</p>
+    </section>
+
+    <!-- RIGHT: Unified Minimalist Sidebar (Like Chess.com - Single Integrated Panel) -->
+    <aside class="w-full lg:w-80 xl:w-96 flex flex-col h-[520px] lg:h-[min(84vh+50px,850px)] bg-surface-900 border border-white/[0.06] rounded-xl overflow-hidden shrink-0">
+      
+      <!-- Minimalist Navigation Tabs (Play / Moves / Chat / Settings) -->
+      <div class="flex items-center border-b border-white/[0.06] bg-surface-950/60 p-1 gap-1 text-xs select-none">
+        <button class="sidebar-tab-btn active" data-tab="tab-play">
+          <i class="fa-solid fa-play text-[11px] mr-1 text-hydro-400"></i>
+          <span>Play</span>
+        </button>
+        <button class="sidebar-tab-btn" data-tab="tab-moves">
+          <i class="fa-solid fa-list-ol text-[11px] mr-1 text-gold-400"></i>
+          <span>Moves</span>
+        </button>
+        <button class="sidebar-tab-btn" data-tab="tab-chat">
+          <i class="fa-solid fa-comments text-[11px] mr-1 text-slate-400"></i>
+          <span>Chat</span>
+        </button>
+        <button class="sidebar-tab-btn" data-tab="tab-settings">
+          <i class="fa-solid fa-gear text-[11px] mr-1 text-slate-400"></i>
+          <span>Settings</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: PLAY & MATCH LOBBY -->
+      <div id="tab-play" class="sidebar-tab-content active flex-1 p-3.5 flex flex-col justify-between overflow-y-auto custom-scrollbar">
+        <div class="space-y-4">
+          
+          <!-- Mode Switcher Pill Group -->
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Game Mode</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button class="mode-tab-btn active" data-mode="online">
+                <i class="fa-solid fa-globe mr-1 text-hydro-400"></i> Online P2P
+              </button>
+              <button class="mode-tab-btn" data-mode="offline_local">
+                <i class="fa-solid fa-users mr-1 text-gold-400"></i> Pass & Play
+              </button>
+              <button class="mode-tab-btn" data-mode="bluetooth">
+                <i class="fa-brands fa-bluetooth-b mr-1 text-blue-400"></i> Bluetooth
+              </button>
+              <button class="mode-tab-btn" data-mode="offline_tab">
+                <i class="fa-solid fa-table-columns mr-1 text-emerald-400"></i> Dual Window
+              </button>
             </div>
           </div>
 
-          <div id="joinDefaultContent">
-            <p class="text-xs text-slate-300 mb-4 leading-relaxed">
-              Have a duel code or invite link from the host? Paste it below to challenge the reigning stage directly.
-            </p>
+          <!-- Time Control Selector -->
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Time Control</label>
+            <div class="grid grid-cols-3 gap-1">
+              <button class="timer-select-btn" data-time="0" data-inc="0">No Clock</button>
+              <button class="timer-select-btn" data-time="60" data-inc="0">1 min</button>
+              <button class="timer-select-btn active" data-time="180" data-inc="2">3+2 Blitz</button>
+              <button class="timer-select-btn" data-time="300" data-inc="0">5 min</button>
+              <button class="timer-select-btn" data-time="600" data-inc="0">10 min</button>
+              <button class="timer-select-btn" data-time="900" data-inc="10">15+10</button>
+            </div>
+          </div>
 
-            <div class="space-y-3">
-              <div class="flex items-center gap-2">
-                <input id="manualJoinInput" type="text" placeholder="Enter Host Peer ID or full URL..." class="w-full bg-fontaine-950/90 border border-blue-500/40 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 font-mono tracking-tight focus:outline-none focus:ring-1 focus:ring-blue-400">
-                <button id="manualJoinBtn" class="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs font-opera tracking-wider transition shadow-sm flex items-center gap-1.5">
-                  <i class="fa-solid fa-bolt"></i>
-                  <span>CONNECT</span>
+          <!-- Mode-Specific Action Panels -->
+          <!-- 1. Online Panel -->
+          <div id="panel-online" class="space-y-2.5">
+            <div id="hostInitialActions">
+              <button id="createGameBtn" class="w-full py-2.5 px-3 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-xs tracking-wide transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Create Invite Link (Host)</span>
+              </button>
+            </div>
+
+            <!-- Host Link Box -->
+            <div id="hostLinkBox" class="hidden space-y-2">
+              <div class="flex items-center gap-1.5">
+                <input id="shareLinkInput" type="text" readonly value="Generating link..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-hydro-300 font-mono tracking-tight focus:outline-none">
+                <button id="copyLinkBtn" class="shrink-0 px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-surface-950 font-bold text-xs transition" title="Copy Link">
+                  <i id="copyIcon" class="fa-solid fa-copy"></i>
+                  <span id="copyBtnText" class="hidden sm:inline ml-1">Copy</span>
+                </button>
+                <button id="showQrBtn" class="shrink-0 p-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs transition" title="Show QR Code">
+                  <i class="fa-solid fa-qrcode"></i>
                 </button>
               </div>
-              <p class="text-[11px] text-slate-400">
-                <i class="fa-solid fa-circle-question text-cyan-400 mr-1"></i>
-                Tip: If you opened an invitation link, connection begins automatically!
+              <p class="text-[11px] text-amber-300/80 flex items-center gap-1 animate-pulse">
+                <i class="fa-solid fa-spinner fa-spin"></i> Waiting for opponent to join...
               </p>
             </div>
-          </div>
 
-          <div id="autoJoinState" class="hidden space-y-3 py-2">
-            <div class="flex items-center gap-3 p-3.5 rounded-xl bg-cyan-950/50 border border-cyan-500/40">
-              <i class="fa-solid fa-satellite-dish text-cyan-400 text-xl animate-bounce"></i>
-              <div>
-                <div class="text-xs font-bold font-opera text-cyan-200">Joining Host's Stage...</div>
-                <div id="autoJoinHostText" class="text-[11px] text-slate-300 font-mono">Connecting to Peer...</div>
+            <!-- Join manual input -->
+            <div id="joinDefaultContent" class="pt-2 border-t border-white/[0.06] space-y-1.5">
+              <label class="text-[11px] text-slate-400">Or join an existing game:</label>
+              <div class="flex items-center gap-1.5">
+                <input id="manualJoinInput" type="text" placeholder="Paste link or Peer ID..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono tracking-tight focus:outline-none focus:border-hydro-400">
+                <button id="manualJoinBtn" class="shrink-0 px-3 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 font-bold text-xs transition">
+                  Join
+                </button>
               </div>
             </div>
-            <button id="cancelJoinBtn" class="text-xs text-slate-400 hover:text-rose-400 underline decoration-dotted transition">
-              Cancel and host your own game instead
-            </button>
-          </div>
-        </div>
 
-      </div>
-
-      <!-- 2. OFFLINE PASS & PLAY LOBBY -->
-      <div id="offlinePassPlayLobby" class="hidden card-fontaine p-6 rounded-2xl">
-        <div class="max-w-2xl mx-auto text-center space-y-4">
-          <div class="w-12 h-12 mx-auto rounded-full bg-fontaine-800 border border-fontaine-gold/60 flex items-center justify-center text-fontaine-gold text-2xl shadow-gold-glow">
-            <i class="fa-solid fa-users"></i>
-          </div>
-          <div>
-            <h2 class="font-opera text-xl font-bold text-fontaine-pearl">Local Pass & Play (Offline Duel)</h2>
-            <p class="text-xs text-slate-300 mt-1">Play with a friend on the same device/screen without any internet connection.</p>
+            <div id="autoJoinState" class="hidden p-2 rounded-lg bg-hydro-500/10 border border-hydro-500/30 text-xs space-y-1">
+              <div class="font-bold text-hydro-300">Connecting to Host...</div>
+              <div id="autoJoinHostText" class="text-[10px] text-slate-400 font-mono"></div>
+              <button id="cancelJoinBtn" class="text-[10px] text-rose-400 hover:underline">Cancel</button>
+            </div>
           </div>
 
-          <div class="p-4 rounded-xl bg-fontaine-950/80 border border-fontaine-700 max-w-md mx-auto space-y-3 text-left text-xs">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-slate-200 font-medium">Auto-flip board each turn:</span>
-              <input id="autoFlipToggle" type="checkbox" checked class="w-4 h-4 rounded text-cyan-500 accent-cyan-500">
-            </label>
-            <p class="text-[11px] text-slate-400">When enabled, the chessboard smoothly rotates 180° after each move so each player faces their army.</p>
-          </div>
-
-          <div>
-            <button id="startPassPlayBtn" class="py-3 px-8 rounded-xl bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold hover:brightness-110 text-fontaine-950 font-opera font-bold text-sm tracking-wider shadow-gold-glow transition flex items-center justify-center gap-2 mx-auto">
+          <!-- 2. Pass & Play Panel -->
+          <div id="panel-offline_local" class="hidden space-y-2.5">
+            <div class="flex items-center justify-between text-xs py-1">
+              <span class="text-slate-300">Auto-flip board each turn:</span>
+              <input id="autoFlipToggle" type="checkbox" checked class="w-4 h-4 rounded text-hydro-500 accent-hydro-500">
+            </div>
+            <button id="startPassPlayBtn" class="w-full py-2.5 px-3 rounded-lg bg-gold-500 hover:bg-gold-400 text-surface-950 font-bold text-xs tracking-wide transition flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-chess"></i>
-              <span>START LOCAL DUEL NOW</span>
+              <span>Start Pass & Play</span>
             </button>
           </div>
-        </div>
-      </div>
 
-      <!-- 3. OFFLINE BLUETOOTH LOBBY -->
-      <div id="bluetoothLobby" class="hidden card-fontaine p-6 rounded-2xl">
-        <div class="max-w-2xl mx-auto text-center space-y-4">
-          <div class="w-12 h-12 mx-auto rounded-full bg-blue-950 border border-blue-400/60 flex items-center justify-center text-blue-400 text-2xl shadow-hydro-glow">
-            <i class="fa-brands fa-bluetooth-b"></i>
-          </div>
-          <div>
-            <h2 class="font-opera text-xl font-bold text-fontaine-pearl">Bluetooth Connectivity (Web Bluetooth API)</h2>
-            <p class="text-xs text-slate-300 mt-1">Pair with a Bluetooth LE peer device or smart chessboard offline.</p>
-          </div>
-
-          <div id="bluetoothStatusBox" class="p-4 rounded-xl bg-fontaine-950/80 border border-blue-500/40 max-w-md mx-auto text-left text-xs space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-cyan-300">Web Bluetooth Support:</span>
-              <span id="bluetoothSupportBadge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">Checking...</span>
+          <!-- 3. Bluetooth Panel -->
+          <div id="panel-bluetooth" class="hidden space-y-2.5 text-xs">
+            <div class="p-2 rounded bg-surface-950 border border-white/5 space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-300">Web Bluetooth:</span>
+                <span id="bluetoothSupportBadge" class="text-[10px] font-mono px-1.5 rounded bg-surface-800 text-slate-400">Checking...</span>
+              </div>
+              <p id="bluetoothDesc" class="text-[10px] text-slate-400 leading-snug">Connect to BLE peripherals or smart chessboards.</p>
             </div>
-            <p id="bluetoothDesc" class="text-[11px] text-slate-400 leading-relaxed">
-              Web Bluetooth allows web apps on Chrome/Edge/Opera (Android, macOS, Windows 10/11) to connect to BLE devices wirelessly without internet.
-            </p>
+            <button id="scanBluetoothBtn" class="w-full py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+              <i class="fa-brands fa-bluetooth-b"></i>
+              <span>Pair Bluetooth Device</span>
+            </button>
+            <button id="startBtSimulationBtn" class="w-full py-1.5 rounded bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs">
+              Fallback: Play Local Offline
+            </button>
           </div>
 
-          <div class="flex flex-wrap items-center justify-center gap-3">
-            <button id="scanBluetoothBtn" class="py-3 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-opera font-bold text-xs sm:text-sm tracking-wider shadow-hydro-glow transition flex items-center gap-2">
-              <i class="fa-brands fa-bluetooth text-base"></i>
-              <span>SCAN & PAIR BLUETOOTH DEVICE</span>
-            </button>
-            <button id="startBtSimulationBtn" class="py-3 px-5 rounded-xl bg-fontaine-800 hover:bg-fontaine-700 border border-fontaine-600 text-slate-200 font-medium text-xs sm:text-sm transition flex items-center gap-2">
-              <i class="fa-solid fa-play"></i>
-              <span>Play Local Offline (Fallback)</span>
-            </button>
+          <!-- 4. Multi-Tab Panel -->
+          <div id="panel-offline_tab" class="hidden space-y-2 text-xs">
+            <p class="text-[11px] text-slate-400 leading-snug">Open this page in a second window on the same device. Dual windows sync without internet!</p>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button id="startBroadcastWhiteBtn" class="py-2 rounded-lg bg-surface-800 hover:bg-surface-700 font-bold text-xs text-slate-200">
+                Play White (Win 1)
+              </button>
+              <button id="startBroadcastBlackBtn" class="py-2 rounded-lg bg-surface-800 hover:bg-surface-700 font-bold text-xs text-slate-200">
+                Play Black (Win 2)
+              </button>
+            </div>
           </div>
+
         </div>
-      </div>
 
-      <!-- 4. OFFLINE SAME-DEVICE MULTI-TAB LOBBY -->
-      <div id="offlineMultiTabLobby" class="hidden card-fontaine p-6 rounded-2xl">
-        <div class="max-w-2xl mx-auto text-center space-y-4">
-          <div class="w-12 h-12 mx-auto rounded-full bg-emerald-950 border border-emerald-400/60 flex items-center justify-center text-emerald-400 text-2xl shadow-md">
-            <i class="fa-solid fa-table-columns"></i>
+        <!-- Dynamic Furina Quote / Verdict Strip -->
+        <div class="mt-4 pt-3 border-t border-white/[0.06] text-xs space-y-1 text-slate-400">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="font-bold text-slate-300" id="verdictStatusTitle">The Stage is Set</span>
+            <span id="moveCountBadge" class="font-mono text-[10px] text-slate-500">Move 1</span>
           </div>
-          <div>
-            <h2 class="font-opera text-xl font-bold text-fontaine-pearl">Dual Window / Multi-Tab (100% Offline)</h2>
-            <p class="text-xs text-slate-300 mt-1">Play on two browser windows side-by-side on the same computer using local BroadcastChannel.</p>
-          </div>
-
-          <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-            Open this page in a second browser window on your device. The two windows communicate seamlessly offline without any network or internet connection!
+          <p id="verdictStatusDesc" class="text-[11px] leading-snug text-slate-400">
+            Awaiting dual sovereigns to commence the drama.
           </p>
-
-          <div class="flex items-center justify-center gap-3">
-            <button id="startBroadcastWhiteBtn" class="py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-opera font-bold text-xs sm:text-sm tracking-wider transition">
-              Play as White (Window 1)
-            </button>
-            <button id="startBroadcastBlackBtn" class="py-3 px-5 rounded-xl bg-fontaine-800 hover:bg-fontaine-700 border border-fontaine-600 text-slate-200 font-opera font-bold text-xs sm:text-sm tracking-wider transition">
-              Play as Black (Window 2)
-            </button>
-          </div>
+          <p id="furinaQuoteText" class="text-[11px] italic text-hydro-300/80 pt-1">
+            "The curtains are drawn! Let us see what drama you can orchestrate."
+          </p>
         </div>
       </div>
 
-    </div>
-
-    <!-- Active Gameplay Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      
-      <!-- Left Column: The Grand Stage (Chessboard) -->
-      <div class="lg:col-span-7 xl:col-span-8 flex flex-col items-center">
+      <!-- TAB 2: MOVES NOTATION LOG (Chess.com Clean 2-Column Table) -->
+      <div id="tab-moves" class="sidebar-tab-content flex-1 flex flex-col p-2 overflow-hidden">
+        <div class="flex items-center justify-between px-2 py-1.5 border-b border-white/[0.06] text-[11px] text-slate-400 font-semibold uppercase">
+          <span class="w-8">#</span>
+          <span class="flex-1">White</span>
+          <span class="flex-1">Black</span>
+        </div>
         
-        <!-- Opponent Player Banner with Clock -->
-        <div id="opponentBanner" class="w-full max-w-[520px] mb-2 px-3.5 py-2.5 rounded-xl bg-fontaine-900/90 border border-fontaine-700/70 flex items-center justify-between shadow-sm">
-          <div class="flex items-center gap-3">
-            <div id="opponentAvatar" class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-200 text-base shadow-inner">
-              <i class="fa-solid fa-chess-king"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span id="opponentName" class="font-opera font-bold text-xs sm:text-sm text-fontaine-pearl">Challenger</span>
-                <span id="opponentColorBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">Black</span>
-              </div>
-              <div id="opponentCapturedContainer" class="flex items-center gap-1 text-xs text-slate-300 min-h-[18px]">
-                <span id="opponentCapturedPieces" class="flex items-center gap-0.5 text-sm"></span>
-                <span id="opponentScoreAdvantage" class="text-[11px] font-bold text-fontaine-gold ml-1"></span>
-              </div>
-            </div>
+        <div id="moveLogContainer" class="flex-1 overflow-y-auto font-mono text-xs space-y-0.5 custom-scrollbar p-1">
+          <div id="emptyMovePlaceholder" class="h-full flex flex-col items-center justify-center text-slate-500 text-center py-6">
+            <span class="text-xs">No moves enacted yet.</span>
           </div>
-
-          <!-- Opponent Digital Chess Clock & Turn Badge -->
-          <div class="flex items-center gap-2.5">
-            <div id="opponentTurnBadge" class="hidden items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-500/50">
-              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              <span>Thinking</span>
-            </div>
-            <!-- Opponent Clock Display -->
-            <div id="opponentClockWrapper" class="chess-clock-box">
-              <i class="fa-solid fa-clock text-[10px] text-slate-400 mr-1"></i>
-              <span id="opponentClockTime" class="font-mono font-bold text-sm sm:text-base">03:00</span>
-            </div>
-          </div>
+          <div id="moveLogList" class="space-y-0.5"></div>
         </div>
-
-        <!-- The Chessboard Stage with Fontaine Filigree Border -->
-        <div class="board-theatrical-wrapper relative w-full max-w-[520px] aspect-square p-2.5 sm:p-3.5 rounded-2xl bg-gradient-to-b from-fontaine-850 via-fontaine-900 to-fontaine-950 border-2 border-fontaine-gold/60 shadow-theatre">
-          
-          <div class="absolute -top-1.5 -left-1.5 w-6 h-6 border-t-2 border-l-2 border-cyan-400 pointer-events-none rounded-tl-md"></div>
-          <div class="absolute -top-1.5 -right-1.5 w-6 h-6 border-t-2 border-r-2 border-cyan-400 pointer-events-none rounded-tr-md"></div>
-          <div class="absolute -bottom-1.5 -left-1.5 w-6 h-6 border-b-2 border-l-2 border-cyan-400 pointer-events-none rounded-bl-md"></div>
-          <div class="absolute -bottom-1.5 -right-1.5 w-6 h-6 border-b-2 border-r-2 border-cyan-400 pointer-events-none rounded-br-md"></div>
-
-          <!-- The Chessboard JS Mount Point -->
-          <div id="chessBoard" class="w-full h-full rounded-xl overflow-hidden shadow-inner"></div>
-
-          <!-- Turn Overlay Announcement Banner -->
-          <div id="floatingCheckBanner" class="hidden absolute top-6 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full bg-rose-950/95 border border-rose-500 text-rose-200 text-xs font-bold font-opera shadow-lg animate-bounce flex items-center gap-2">
-            <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
-            <span id="floatingCheckText">Check! The Sovereign is Threatened!</span>
-          </div>
-        </div>
-
-        <!-- Self Player Banner with Clock -->
-        <div id="selfBanner" class="w-full max-w-[520px] mt-2 px-3.5 py-2.5 rounded-xl bg-fontaine-900/90 border border-fontaine-700/70 flex items-center justify-between shadow-sm">
-          <div class="flex items-center gap-3">
-            <div id="selfAvatar" class="w-9 h-9 rounded-lg bg-cyan-950 border border-cyan-500/60 flex items-center justify-center text-cyan-300 text-base shadow-inner">
-              <i class="fa-solid fa-chess-queen"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span id="selfName" class="font-opera font-bold text-xs sm:text-sm text-fontaine-pearl">You (Lady Furina)</span>
-                <span id="selfColorBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700">White</span>
-              </div>
-              <div id="selfCapturedContainer" class="flex items-center gap-1 text-xs text-slate-300 min-h-[18px]">
-                <span id="selfCapturedPieces" class="flex items-center gap-0.5 text-sm"></span>
-                <span id="selfScoreAdvantage" class="text-[11px] font-bold text-fontaine-gold ml-1"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Self Digital Chess Clock & Turn Badge -->
-          <div class="flex items-center gap-2.5">
-            <div id="selfTurnBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-500/50 shadow-sm animate-pulse">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span id="selfTurnText">Your Move</span>
-            </div>
-            <!-- Self Clock Display -->
-            <div id="selfClockWrapper" class="chess-clock-box active-clock">
-              <i class="fa-solid fa-clock text-[10px] text-cyan-300 mr-1"></i>
-              <span id="selfClockTime" class="font-mono font-bold text-sm sm:text-base text-cyan-200">03:00</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick In-Board Utility Bar (With Takeback & Flip) -->
-        <div class="w-full max-w-[520px] mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-400">
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <!-- Takeback / Undo Button -->
-            <button id="takebackBtn" class="px-2.5 py-1.5 rounded-lg bg-fontaine-900 hover:bg-fontaine-800 border border-fontaine-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 transition flex items-center gap-1.5" title="Request or perform move takeback">
-              <i class="fa-solid fa-rotate-left text-[11px] text-cyan-400"></i>
-              <span class="text-[11px]" id="takebackBtnText">Takeback</span>
-            </button>
-            <button id="flipBoardBtn" class="px-2.5 py-1.5 rounded-lg bg-fontaine-900 hover:bg-fontaine-800 border border-fontaine-800 hover:border-fontaine-600 transition flex items-center gap-1.5" title="Flip Board Perspective">
-              <i class="fa-solid fa-rotate text-[11px]"></i>
-              <span class="text-[11px]">Flip View</span>
-            </button>
-            <button id="fenCopyBtn" class="px-2.5 py-1.5 rounded-lg bg-fontaine-900 hover:bg-fontaine-800 border border-fontaine-800 hover:border-fontaine-600 transition flex items-center gap-1.5" title="Copy FEN string">
-              <i class="fa-solid fa-code text-[11px]"></i>
-              <span class="text-[11px]">Copy FEN</span>
-            </button>
-          </div>
-
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <button id="offerDrawBtn" class="px-2.5 py-1.5 rounded-lg bg-fontaine-900 hover:bg-fontaine-800 border border-fontaine-800 hover:border-amber-600/50 text-slate-300 hover:text-amber-300 transition flex items-center gap-1.5" title="Offer a peaceful resolution">
-              <i class="fa-solid fa-handshake text-[11px]"></i>
-              <span class="text-[11px]">Offer Draw</span>
-            </button>
-            <button id="resignBtn" class="px-2.5 py-1.5 rounded-lg bg-fontaine-900 hover:bg-rose-950/60 border border-fontaine-800 hover:border-rose-600/50 text-slate-400 hover:text-rose-300 transition flex items-center gap-1.5" title="Concede the stage">
-              <i class="fa-solid fa-flag text-[11px]"></i>
-              <span class="text-[11px]">Resign</span>
-            </button>
-          </div>
-        </div>
-
       </div>
 
-      <!-- Right Column: The Royal Pavilion (Status, Moves & Chat) -->
-      <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
-        
-        <!-- Game Status & Stage Overview Card -->
-        <div class="card-fontaine p-4 rounded-2xl relative">
-          <div class="flex items-center justify-between pb-3 mb-3 border-b border-fontaine-700/50">
-            <span class="font-opera font-bold text-xs tracking-wider text-fontaine-gold uppercase flex items-center gap-1.5">
-              <i class="fa-solid fa-scale-balanced"></i> Court of Judgement
-            </span>
-            <span id="moveCountBadge" class="text-[11px] font-mono text-slate-400 bg-fontaine-950 px-2 py-0.5 rounded border border-fontaine-800">
-              Move 1
-            </span>
-          </div>
-
-          <!-- Dynamic Verdict Status Message -->
-          <div id="verdictStatusBox" class="p-3 rounded-xl bg-fontaine-950/70 border border-cyan-500/30 flex items-start gap-2.5">
-            <i id="verdictStatusIcon" class="fa-solid fa-hourglass-half text-cyan-400 mt-0.5"></i>
-            <div>
-              <div id="verdictStatusTitle" class="text-xs font-bold text-cyan-200 font-opera">The Stage is Set</div>
-              <div id="verdictStatusDesc" class="text-[11px] text-slate-300 mt-0.5 leading-snug">
-                Awaiting connection. When ready, the duel of the dual sovereigns shall commence.
-              </div>
-            </div>
+      <!-- TAB 3: SALON CHAT & EMOTES -->
+      <div id="tab-chat" class="sidebar-tab-content flex-1 flex flex-col p-2.5 overflow-hidden">
+        <div id="chatMessages" class="flex-1 overflow-y-auto space-y-2 text-xs custom-scrollbar pr-1 mb-2">
+          <div class="p-1.5 text-center text-slate-500 text-[11px] italic">
+            "Welcome to the Opera Salon. Send messages or quotes to your opponent!"
           </div>
         </div>
 
-        <!-- Theatrical Move Notation (Chronicles of the Duel) -->
-        <div class="card-fontaine p-4 rounded-2xl flex flex-col h-[230px]">
-          <div class="flex items-center justify-between pb-2 mb-2 border-b border-fontaine-700/50">
-            <span class="font-opera font-bold text-xs tracking-wider text-fontaine-gold uppercase flex items-center gap-1.5">
-              <i class="fa-solid fa-feather-pointed"></i> Opera Notation (PGN)
-            </span>
-            <span class="text-[11px] text-slate-400">SAN Standard</span>
-          </div>
-
-          <div id="moveLogContainer" class="flex-1 overflow-y-auto pr-1 font-mono text-xs space-y-1 custom-scrollbar">
-            <div id="emptyMovePlaceholder" class="h-full flex flex-col items-center justify-center text-slate-500 text-center py-6">
-              <i class="fa-solid fa-scroll text-2xl mb-1.5 opacity-40"></i>
-              <span class="text-xs">No moves enacted yet.<br>The first movement awaits White.</span>
-            </div>
-            <div id="moveLogList" class="space-y-1"></div>
-          </div>
+        <!-- Quick Emotes -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-1.5 custom-scrollbar text-[11px] shrink-0">
+          <button class="chat-emote-btn" data-text="Bravo! 🎭">Bravo!</button>
+          <button class="chat-emote-btn" data-text="Order in the Court! ⚖️">Order!</button>
+          <button class="chat-emote-btn" data-text="Curious move... 👑">Curious...</button>
+          <button class="chat-emote-btn" data-text="Encore! 💧">Encore!</button>
         </div>
 
-        <!-- Theatrical Salon Chat & Furina Reactions -->
-        <div class="card-fontaine p-4 rounded-2xl flex flex-col h-[270px]">
-          <div class="flex items-center justify-between pb-2 mb-2 border-b border-fontaine-700/50">
-            <span class="font-opera font-bold text-xs tracking-wider text-cyan-300 uppercase flex items-center gap-1.5">
-              <i class="fa-solid fa-comments"></i> Salon Communications
-            </span>
-            <span id="chatChannelBadge" class="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Live Channel
-            </span>
-          </div>
-
-          <div id="chatMessages" class="flex-1 overflow-y-auto pr-1 text-xs space-y-2 custom-scrollbar mb-2">
-            <div class="p-2 rounded-lg bg-fontaine-950/60 border border-fontaine-800 text-slate-400 text-[11px] italic text-center">
-              "Let us maintain utmost decorum in the Opera House!"
-            </div>
-          </div>
-
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 custom-scrollbar text-[11px]">
-            <button class="chat-emote-btn" data-text="Bravo! A splendid performance! 🎭">Bravo!</button>
-            <button class="chat-emote-btn" data-text="Order! Order in the Court! ⚖️">Order!</button>
-            <button class="chat-emote-btn" data-text="Is that truly your final decree? 👑">Curious...</button>
-            <button class="chat-emote-btn" data-text="Encore! The drama intensifies! 💧">Encore!</button>
-          </div>
-
-          <form id="chatForm" class="flex items-center gap-2 mt-1">
-            <input id="chatInput" type="text" placeholder="Send court message..." maxlength="120" class="w-full bg-fontaine-950/90 border border-fontaine-700 rounded-xl px-3 py-2 text-xs text-fontaine-pearl placeholder-slate-500 focus:outline-none focus:border-cyan-400">
-            <button type="submit" class="p-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-fontaine-950 font-bold transition flex items-center justify-center shrink-0">
-              <i class="fa-solid fa-paper-plane text-xs"></i>
-            </button>
-          </form>
-        </div>
-
+        <!-- Chat Input -->
+        <form id="chatForm" class="flex items-center gap-1.5 shrink-0 mt-1">
+          <input id="chatInput" type="text" placeholder="Type message..." maxlength="120" class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-hydro-400">
+          <button type="submit" class="p-1.5 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 transition flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </form>
       </div>
 
-    </div>
+      <!-- TAB 4: SETTINGS & AUDIO -->
+      <div id="tab-settings" class="sidebar-tab-content flex-1 p-3.5 space-y-4 overflow-y-auto custom-scrollbar text-xs">
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Move Sound Theme</label>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button class="sound-style-btn active" data-style="opera">Opera</button>
+            <button class="sound-style-btn" data-style="arcade">8-Bit</button>
+            <button class="sound-style-btn" data-style="modern">Minimal</button>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300">Waltz Background Music:</span>
+            <button id="modalMusicToggleBtn" class="px-2 py-0.5 rounded bg-surface-800 text-hydro-400 text-[11px] font-bold">Play</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
+            <input id="musicVolumeSlider" type="range" min="0" max="100" value="40" class="w-full accent-hydro-400 cursor-pointer">
+            <i class="fa-solid fa-volume-high text-hydro-400 text-[10px]"></i>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300">Sound Effects Volume:</span>
+            <span id="sfxVolumeLabel" class="text-slate-500 text-[10px] font-mono">80%</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
+            <input id="sfxVolumeSlider" type="range" min="0" max="100" value="80" class="w-full accent-gold-400 cursor-pointer">
+            <i class="fa-solid fa-volume-high text-gold-400 text-[10px]"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM CONTROL BAR: Sleek Flat Action Icons (Takeback / Draw / Resign / Flip) -->
+      <div class="border-t border-white/[0.06] bg-surface-950/80 p-1.5 flex items-center justify-around text-xs shrink-0 select-none">
+        <!-- Takeback -->
+        <button id="takebackBtn" class="action-icon-btn" title="Request Takeback">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span class="text-[10px] hidden sm:inline" id="takebackBtnText">Takeback</span>
+        </button>
+
+        <!-- Offer Draw -->
+        <button id="offerDrawBtn" class="action-icon-btn" title="Offer Draw">
+          <i class="fa-solid fa-handshake"></i>
+          <span class="text-[10px] hidden sm:inline">Draw</span>
+        </button>
+
+        <!-- Resign -->
+        <button id="resignBtn" class="action-icon-btn hover:text-rose-400" title="Resign Game">
+          <i class="fa-solid fa-flag"></i>
+          <span class="text-[10px] hidden sm:inline">Resign</span>
+        </button>
+
+        <!-- Flip Board View -->
+        <button id="flipBoardBtn" class="action-icon-btn" title="Flip Board">
+          <i class="fa-solid fa-rotate"></i>
+          <span class="text-[10px] hidden sm:inline">Flip</span>
+        </button>
+
+        <!-- Copy FEN -->
+        <button id="fenCopyBtn" class="action-icon-btn" title="Copy FEN">
+          <i class="fa-solid fa-copy"></i>
+          <span class="text-[10px] hidden sm:inline">FEN</span>
+        </button>
+      </div>
+
+    </aside>
 
   </main>
 
-  <!-- Audio & Theme Customization Modal -->
-  <div id="soundSettingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-md w-full p-6 rounded-2xl border-2 border-fontaine-gold shadow-gold-glow relative animate-scale-up">
-      <div class="corner-gold-tl"></div>
-      <div class="corner-gold-br"></div>
-      <button id="closeSoundSettingsBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
+  <!-- Clean Floating Promotion Modal -->
+  <div id="promotionModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-white/10 max-w-xs w-full p-5 rounded-xl shadow-2xl text-center animate-scale-up">
+      <h3 class="font-bold text-sm text-slate-100 mb-1">Promote Pawn</h3>
+      <p class="text-xs text-slate-400 mb-4">Choose promotion piece:</p>
 
-      <div class="flex items-center gap-3 mb-5">
-        <div class="w-10 h-10 rounded-xl bg-fontaine-900 border border-fontaine-gold flex items-center justify-center text-fontaine-gold text-lg">
-          <i class="fa-solid fa-sliders"></i>
-        </div>
-        <div>
-          <h3 class="font-opera text-base font-bold text-fontaine-pearl">Audio & Fontaine Orchestration</h3>
-          <p class="text-xs text-slate-400">Customize move sounds & background music</p>
-        </div>
-      </div>
-
-      <div class="space-y-4 text-xs">
-        <!-- Sound Theme Preset -->
-        <div>
-          <label class="block font-semibold text-cyan-300 mb-2">Move Sound Style:</label>
-          <div class="grid grid-cols-3 gap-2">
-            <button class="sound-style-btn active" data-style="opera">
-              <i class="fa-solid fa-masks-theater block text-sm mb-1 text-fontaine-gold"></i>
-              Fontaine Opera
-            </button>
-            <button class="sound-style-btn" data-style="arcade">
-              <i class="fa-solid fa-gamepad block text-sm mb-1 text-cyan-400"></i>
-              8-Bit Arcade
-            </button>
-            <button class="sound-style-btn" data-style="modern">
-              <i class="fa-solid fa-compact-disc block text-sm mb-1 text-emerald-400"></i>
-              Modern Glass
-            </button>
-          </div>
-        </div>
-
-        <!-- Fontaine Waltz Background Music Slider -->
-        <div class="p-3.5 rounded-xl bg-fontaine-950/70 border border-fontaine-700/60 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-slate-200 flex items-center gap-1.5">
-              <i class="fa-solid fa-music text-fontaine-gold"></i> Fontaine Theatrical Waltz Music
-            </span>
-            <button id="modalMusicToggleBtn" class="px-2.5 py-1 rounded bg-cyan-950 border border-cyan-500/50 text-cyan-300 font-mono text-[11px] font-bold">
-              Play Waltz
-            </button>
-          </div>
-          <div class="flex items-center gap-3 pt-1">
-            <i class="fa-solid fa-volume-low text-slate-400"></i>
-            <input id="musicVolumeSlider" type="range" min="0" max="100" value="40" class="w-full accent-cyan-400 cursor-pointer">
-            <i class="fa-solid fa-volume-high text-cyan-300"></i>
-          </div>
-        </div>
-
-        <!-- Sound FX Volume Slider -->
-        <div class="p-3.5 rounded-xl bg-fontaine-950/70 border border-fontaine-700/60 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-semibold text-slate-200 flex items-center gap-1.5">
-              <i class="fa-solid fa-bell text-cyan-300"></i> Sound Effects Volume
-            </span>
-            <span id="sfxVolumeLabel" class="text-slate-400 font-mono text-[11px]">80%</span>
-          </div>
-          <div class="flex items-center gap-3 pt-1">
-            <i class="fa-solid fa-volume-low text-slate-400"></i>
-            <input id="sfxVolumeSlider" type="range" min="0" max="100" value="80" class="w-full accent-fontaine-gold cursor-pointer">
-            <i class="fa-solid fa-volume-high text-fontaine-gold"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-5 text-center">
-        <button id="dismissSoundSettingsBtn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold text-fontaine-950 font-opera font-bold text-xs tracking-wider transition hover:brightness-110">
-          Save Preferences
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Takeback Request Confirmation Modal (WebRTC P2P) -->
-  <div id="takebackModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-sm w-full p-6 rounded-2xl border-2 border-cyan-400 shadow-hydro-glow text-center relative animate-scale-up">
-      <div class="corner-gold-tl"></div>
-      <div class="corner-gold-br"></div>
-      
-      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-cyan-950 border border-cyan-400 flex items-center justify-center text-cyan-300 text-xl">
-        <i class="fa-solid fa-rotate-left"></i>
-      </div>
-
-      <h3 class="font-opera text-base font-bold text-fontaine-pearl">Dispensation of the Court</h3>
-      <p id="takebackPromptText" class="text-xs text-slate-300 my-3 leading-relaxed">
-        Your opponent requests permission to retract their last move. Will you grant this royal takeback?
-      </p>
-
-      <div class="flex items-center justify-center gap-3 mt-4">
-        <button id="acceptTakebackBtn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold font-opera text-xs tracking-wider shadow-sm transition hover:brightness-110">
-          Grant Takeback
-        </button>
-        <button id="declineTakebackBtn" class="px-4 py-2 rounded-xl bg-fontaine-850 hover:bg-rose-950/60 border border-fontaine-700 text-slate-300 hover:text-rose-300 font-medium text-xs transition">
-          Decline
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Furina Theatrical Pawn Promotion Modal -->
-  <div id="promotionModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-sm w-full p-6 rounded-2xl border-2 border-fontaine-gold shadow-gold-glow animate-scale-up text-center relative">
-      <div class="corner-gold-tl"></div>
-      <div class="corner-gold-br"></div>
-
-      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-fontaine-900 border border-fontaine-gold/70 flex items-center justify-center text-fontaine-gold text-xl">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-      </div>
-
-      <h3 class="font-opera text-lg font-bold text-fontaine-pearl">Ascension of the Pawn</h3>
-      <p class="text-xs text-slate-300 mt-1 mb-5">
-        Select the form your sovereign pawn shall assume upon the sacred rank:
-      </p>
-
-      <div class="grid grid-cols-4 gap-2.5 mb-2">
+      <div class="grid grid-cols-4 gap-2">
         <button class="promotion-piece-btn" data-piece="q" title="Queen">
-          <img id="promoImgQ" src="https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png" alt="Queen" class="w-12 h-12 mx-auto drop-shadow-md">
-          <span class="text-[11px] font-opera font-bold mt-1 block text-cyan-300">Queen</span>
+          <img id="promoImgQ" src="https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png" alt="Queen" class="w-10 h-10 mx-auto">
+          <span class="text-[10px] font-bold block mt-1 text-hydro-400">Queen</span>
         </button>
         <button class="promotion-piece-btn" data-piece="r" title="Rook">
-          <img id="promoImgR" src="https://chessboardjs.com/img/chesspieces/wikipedia/wR.png" alt="Rook" class="w-12 h-12 mx-auto drop-shadow-md">
-          <span class="text-[11px] font-opera font-bold mt-1 block text-slate-300">Rook</span>
+          <img id="promoImgR" src="https://chessboardjs.com/img/chesspieces/wikipedia/wR.png" alt="Rook" class="w-10 h-10 mx-auto">
+          <span class="text-[10px] font-bold block mt-1 text-slate-300">Rook</span>
         </button>
         <button class="promotion-piece-btn" data-piece="b" title="Bishop">
-          <img id="promoImgB" src="https://chessboardjs.com/img/chesspieces/wikipedia/wB.png" alt="Bishop" class="w-12 h-12 mx-auto drop-shadow-md">
-          <span class="text-[11px] font-opera font-bold mt-1 block text-slate-300">Bishop</span>
+          <img id="promoImgB" src="https://chessboardjs.com/img/chesspieces/wikipedia/wB.png" alt="Bishop" class="w-10 h-10 mx-auto">
+          <span class="text-[10px] font-bold block mt-1 text-slate-300">Bishop</span>
         </button>
         <button class="promotion-piece-btn" data-piece="n" title="Knight">
-          <img id="promoImgN" src="https://chessboardjs.com/img/chesspieces/wikipedia/wN.png" alt="Knight" class="w-12 h-12 mx-auto drop-shadow-md">
-          <span class="text-[11px] font-opera font-bold mt-1 block text-slate-300">Knight</span>
+          <img id="promoImgN" src="https://chessboardjs.com/img/chesspieces/wikipedia/wN.png" alt="Knight" class="w-10 h-10 mx-auto">
+          <span class="text-[10px] font-bold block mt-1 text-slate-300">Knight</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Game Over / Theatrical Verdict Modal -->
-  <div id="gameOverModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-md w-full p-6 sm:p-8 rounded-2xl border-2 border-fontaine-gold shadow-theatre text-center relative animate-scale-up">
-      <div class="corner-gold-tl"></div>
-      <div class="corner-gold-br"></div>
-
-      <div id="gameOverIconWrapper" class="w-16 h-16 mx-auto mb-4 rounded-full bg-fontaine-900 border-2 border-fontaine-gold flex items-center justify-center text-3xl shadow-gold-glow">
-        <i id="gameOverIcon" class="fa-solid fa-trophy text-fontaine-gold"></i>
+  <!-- Clean Takeback Confirmation Modal -->
+  <div id="takebackModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-white/10 max-w-xs w-full p-5 rounded-xl shadow-2xl text-center animate-scale-up">
+      <i class="fa-solid fa-rotate-left text-2xl text-hydro-400 mb-2"></i>
+      <h3 class="font-bold text-sm text-slate-100">Takeback Request</h3>
+      <p id="takebackPromptText" class="text-xs text-slate-300 my-3">Opponent requests to take back their last move. Allow it?</p>
+      <div class="flex items-center justify-center gap-2 mt-4">
+        <button id="acceptTakebackBtn" class="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">Allow</button>
+        <button id="declineTakebackBtn" class="flex-1 py-1.5 rounded-lg bg-surface-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 text-xs transition">Decline</button>
       </div>
+    </div>
+  </div>
 
-      <h2 id="gameOverTitle" class="font-operaDeco text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fontaine-gold via-cyan-200 to-fontaine-gold">
-        The Verdict is Rendered
-      </h2>
-
-      <div id="gameOverSubtitle" class="font-opera text-sm font-semibold text-cyan-300 mt-1">
-        Checkmate by White!
+  <!-- Clean Game Over Modal -->
+  <div id="gameOverModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-white/10 max-w-sm w-full p-6 rounded-2xl shadow-2xl text-center animate-scale-up">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-surface-800 flex items-center justify-center text-2xl">
+        <i id="gameOverIcon" class="fa-solid fa-trophy text-gold-400"></i>
       </div>
-
-      <p id="gameOverQuote" class="text-xs sm:text-sm text-slate-300 my-4 italic px-2">
-        "A magnificent theatrical climax! The final curtains descend upon this encounter."
-      </p>
-
-      <div class="flex items-center justify-center gap-3 mt-6">
-        <button id="rematchBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold hover:brightness-110 text-fontaine-950 font-opera font-bold text-xs sm:text-sm tracking-wider shadow-md transition flex items-center gap-2">
+      <h2 id="gameOverTitle" class="text-lg font-bold text-slate-100">Game Over</h2>
+      <div id="gameOverSubtitle" class="text-xs font-semibold text-hydro-400 mt-0.5">Checkmate</div>
+      <p id="gameOverQuote" class="text-xs text-slate-400 my-3 italic"></p>
+      <div class="flex items-center justify-center gap-2 mt-4">
+        <button id="rematchBtn" class="px-4 py-2 rounded-lg bg-gold-500 hover:bg-gold-400 text-surface-950 font-bold text-xs transition flex items-center gap-1.5">
           <i class="fa-solid fa-rotate-right"></i>
-          <span>ENCORE (REMATCH)</span>
+          <span>Rematch</span>
         </button>
-        <button id="closeGameOverModalBtn" class="px-4 py-2.5 rounded-xl bg-fontaine-850 hover:bg-fontaine-800 border border-fontaine-700 text-slate-300 text-xs sm:text-sm font-medium transition">
-          Inspect Board
+        <button id="closeGameOverModalBtn" class="px-4 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs transition">
+          Close
         </button>
       </div>
     </div>
   </div>
 
-  <!-- QR Code Modal (for mobile match pairing) -->
+  <!-- Clean QR Modal -->
   <div id="qrModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-xs w-full p-6 rounded-2xl border border-cyan-500/50 text-center relative animate-scale-up">
+    <div class="bg-surface-900 border border-white/10 max-w-xs w-full p-5 rounded-xl shadow-2xl text-center animate-scale-up relative">
       <button id="closeQrModalBtn" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1">
-        <i class="fa-solid fa-xmark text-base"></i>
+        <i class="fa-solid fa-xmark text-sm"></i>
       </button>
-      <h3 class="font-opera text-base font-bold text-cyan-300 mb-1">Scan to Join Stage</h3>
-      <p class="text-xs text-slate-400 mb-4">A friend can scan this QR code with their mobile camera to join your game.</p>
-      
-      <div id="qrCodeContainer" class="bg-white p-3 rounded-xl mx-auto inline-block shadow-lg">
-        <img id="qrImage" src="" alt="Room QR Code" class="w-48 h-48 mx-auto">
+      <h3 class="font-bold text-sm text-slate-100 mb-1">Scan to Join</h3>
+      <p class="text-xs text-slate-400 mb-3">Scan with a phone to join the duel instantly.</p>
+      <div class="bg-white p-2 rounded-lg inline-block">
+        <img id="qrImage" src="" alt="Room QR Code" class="w-44 h-44 mx-auto">
       </div>
-
-      <p class="text-[11px] text-slate-400 mt-3 font-mono">No downloads required!</p>
     </div>
   </div>
 
-  <!-- Court Protocol & Help Modal -->
-  <div id="helpModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="card-fontaine max-w-lg w-full p-6 sm:p-7 rounded-2xl border border-cyan-500/50 relative max-h-[85vh] overflow-y-auto custom-scrollbar animate-scale-up">
-      <button id="closeHelpModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
-        <i class="fa-solid fa-xmark text-lg"></i>
+  <!-- Audio Settings Modal -->
+  <div id="soundSettingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-white/10 max-w-sm w-full p-5 rounded-xl shadow-2xl space-y-4 animate-scale-up relative">
+      <button id="closeSoundSettingsBtn" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1">
+        <i class="fa-solid fa-xmark text-sm"></i>
       </button>
-
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/50 flex items-center justify-center text-cyan-300 text-lg">
-          <i class="fa-solid fa-book-open"></i>
-        </div>
-        <div>
-          <h3 class="font-opera text-lg font-bold text-fontaine-pearl">Court Protocol & Modes</h3>
-          <p class="text-xs text-slate-400 font-sans">Opéra Épiclesse Complete Chess Guide</p>
-        </div>
+      <h3 class="font-bold text-sm text-slate-100">Sound Settings</h3>
+      <p class="text-xs text-slate-400">Configure theme audio and move sounds.</p>
+      <div class="text-center pt-2">
+        <button id="dismissSoundSettingsBtn" class="px-4 py-1.5 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-xs transition">
+          Done
+        </button>
       </div>
+    </div>
+  </div>
 
-      <div class="space-y-4 text-xs text-slate-300 leading-relaxed font-sans">
-        <div class="p-3 rounded-xl bg-fontaine-950/70 border border-fontaine-800">
-          <h4 class="font-opera font-bold text-cyan-300 text-xs mb-1 flex items-center gap-1.5">
-            <i class="fa-solid fa-globe text-fontaine-gold"></i> Online P2P WebRTC
-          </h4>
-          <p>
-            Connects dual players directly across the internet via PeerJS link sharing. No central gameplay server!
-          </p>
-        </div>
-
-        <div class="p-3 rounded-xl bg-fontaine-950/70 border border-fontaine-800">
-          <h4 class="font-opera font-bold text-cyan-300 text-xs mb-1 flex items-center gap-1.5">
-            <i class="fa-solid fa-users text-fontaine-gold"></i> Offline Pass & Play
-          </h4>
-          <p>
-            Play side-by-side on the same computer, tablet, or phone without internet. Enable auto-flip so the board rotates for each player's turn!
-          </p>
-        </div>
-
-        <div class="p-3 rounded-xl bg-fontaine-950/70 border border-fontaine-800">
-          <h4 class="font-opera font-bold text-cyan-300 text-xs mb-1 flex items-center gap-1.5">
-            <i class="fa-brands fa-bluetooth text-blue-400"></i> Bluetooth Offline
-          </h4>
-          <p>
-            Uses the browser's Web Bluetooth API to connect directly to Bluetooth LE devices, wireless peripherals, or smart chessboards.
-          </p>
-        </div>
-
-        <div class="p-3 rounded-xl bg-fontaine-950/70 border border-fontaine-800">
-          <h4 class="font-opera font-bold text-cyan-300 text-xs mb-1 flex items-center gap-1.5">
-            <i class="fa-solid fa-stopwatch text-fontaine-gold"></i> Clocks & Takebacks
-          </h4>
-          <p>
-            Choose from Bullet (1 min), Blitz (3+2, 5 min), Rapid (10 min), or Classical (15+10). Takeback requests can be sent at any time and granted by the court.
-          </p>
-        </div>
-      </div>
-
-      <div class="mt-6 text-center">
-        <button id="dismissHelpBtn" class="px-6 py-2 rounded-xl bg-gradient-to-r from-fontaine-goldDark to-fontaine-gold text-fontaine-950 font-opera font-bold text-xs tracking-wider transition hover:brightness-110">
-          Understood, Let the Duel Begin!
+  <!-- Protocol Modal -->
+  <div id="helpModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-white/10 max-w-md w-full p-5 sm:p-6 rounded-xl shadow-2xl relative space-y-3 text-xs text-slate-300 animate-scale-up">
+      <button id="closeHelpModalBtn" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+      <h3 class="font-bold text-sm text-slate-100">Game Information</h3>
+      <p>A serverless, peer-to-peer and offline chess application inspired by Furina.</p>
+      <ul class="list-disc list-inside space-y-1 text-slate-400">
+        <li><strong>Online P2P:</strong> Share links via WebRTC PeerJS with no server.</li>
+        <li><strong>Pass & Play:</strong> Play on the same screen offline with auto-flip.</li>
+        <li><strong>Bluetooth:</strong> Connect to BLE smart boards wirelessly.</li>
+        <li><strong>Dual Window:</strong> Two tabs sync offline on the same computer.</li>
+      </ul>
+      <div class="text-center pt-2">
+        <button id="dismissHelpBtn" class="px-4 py-1.5 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-xs transition">
+          Understood
         </button>
       </div>
     </div>
   </div>
 
   <!-- Toast Notification Hub -->
-  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-  <!-- Theatrical Footer -->
-  <footer class="relative z-10 border-t border-fontaine-800/60 bg-fontaine-950/90 py-3 px-4 text-center text-xs text-slate-500 font-opera">
-    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <span class="text-cyan-400">💧</span>
-        <span>Fontaine Opera Epiclesse &bull; Serverless P2P & Offline Chess</span>
-      </div>
-      <div>
-        <span>Hostable entirely on GitHub Pages with zero backend</span>
-      </div>
-    </div>
-  </footer>
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-1.5 pointer-events-none"></div>
 
   <!-- External Library Dependencies via CDN -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

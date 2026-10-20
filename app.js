@@ -1,8 +1,7 @@
 /**
  * ============================================================================
- * OPÉRA ÉPICLESSE — FURINA P2P & OFFLINE CHESS
- * Serverless, Peer-to-Peer, Offline Pass & Play, Bluetooth & Multi-Tab Chess
- * Theme: Lady Furina / Fontaine Hydro Archon (Genshin Impact)
+ * OPÉRA ÉPICLESSE — MINIMALIST CHESS (FURINA ACCENTS)
+ * Serverless P2P, Offline Pass & Play, Bluetooth & Multi-Tab Chess
  * ============================================================================
  */
 
@@ -17,7 +16,7 @@
   let board = null;          // chessboard.js instance
   let peer = null;           // PeerJS instance
   let connection = null;     // PeerJS DataConnection
-  let broadcastChan = null;  // BroadcastChannel for offline same-device dual window
+  let broadcastChan = null;  // BroadcastChannel for offline dual window
   let bluetoothDevice = null;// Web Bluetooth peripheral device
 
   let myPeerId = null;
@@ -26,7 +25,7 @@
   // Game Modes: 'online' | 'offline_local' | 'bluetooth' | 'offline_tab'
   let currentMode = 'online';
 
-  // Player Color: 'w' (White) | 'b' (Black)
+  // Colors: 'w' (White) | 'b' (Black)
   let myColor = 'w';
   let opponentColor = 'b';
   let isHost = true;
@@ -36,7 +35,7 @@
   // Offline Pass & Play Settings
   let autoFlipEnabled = true;
 
-  // Chess Clocks / Timer State
+  // Chess Clocks / Blitz Timers
   let timePreset = { base: 180, inc: 2 }; // Default 3+2
   let whiteTime = 180;
   let blackTime = 180;
@@ -69,14 +68,12 @@
       '"The stage is bathed in light. Make your opening gambit memorable!"'
     ],
     yourTurn: [
-      '"The spotlight falls upon you. What decree will your pieces enact?"',
-      '"A dramatic turn of events! Command the stage with elegance."',
+      '"The spotlight falls upon you. Command the stage with elegance."',
       '"Take your time, yet do not keep the audience waiting too long."'
     ],
     opponentTurn: [
       '"Mademoiselle Crabaletta watches the opponent with intense scrutiny..."',
-      '"The opposing sovereign ponders their next manoeuvre in the shadows."',
-      '"Surintendante Chevalmarin reports the challenger is deep in thought."'
+      '"The opposing sovereign ponders their next manoeuvre in the shadows."'
     ],
     check: [
       '"Order! Order in the Court! The King\'s sovereign position is gravely imperiled!"',
@@ -105,58 +102,21 @@
   };
 
   // ==========================================================================
-  // 2. DOM ELEMENT REFERENCES
+  // 2. DOM REFERENCES
   // ==========================================================================
 
   const dom = {
-    // Mode Switcher
-    modeTabs: document.querySelectorAll('.mode-tab-btn'),
-    activeModeBadgeText: document.getElementById('activeModeBadgeText'),
-    lobbySection: document.getElementById('lobbySection'),
-    onlineLobbyGrid: document.getElementById('onlineLobbyGrid'),
-    offlinePassPlayLobby: document.getElementById('offlinePassPlayLobby'),
-    bluetoothLobby: document.getElementById('bluetoothLobby'),
-    offlineMultiTabLobby: document.getElementById('offlineMultiTabLobby'),
-
-    // Timer Selector
-    timerButtons: document.querySelectorAll('.timer-select-btn'),
-
-    // Quotes & Pills
-    furinaQuoteText: document.getElementById('furinaQuoteText'),
+    // Top Bar
     connectionPill: document.getElementById('connectionPill'),
     connectionPillText: document.getElementById('connectionPillText'),
+    bgMusicToggleBtn: document.getElementById('bgMusicToggleBtn'),
+    bgMusicIcon: document.getElementById('bgMusicIcon'),
+    bgMusicLabel: document.getElementById('bgMusicLabel'),
+    soundSettingsBtn: document.getElementById('soundSettingsBtn'),
+    helpModalBtn: document.getElementById('helpModalBtn'),
+    navNewGameBtn: document.getElementById('navNewGameBtn'),
 
-    // Host & Join elements
-    hostCard: document.getElementById('hostCard'),
-    joinCard: document.getElementById('joinCard'),
-    createGameBtn: document.getElementById('createGameBtn'),
-    hostInitialActions: document.getElementById('hostInitialActions'),
-    hostLinkBox: document.getElementById('hostLinkBox'),
-    hostPeerBadge: document.getElementById('hostPeerBadge'),
-    shareLinkInput: document.getElementById('shareLinkInput'),
-    copyLinkBtn: document.getElementById('copyLinkBtn'),
-    copyIcon: document.getElementById('copyIcon'),
-    copyBtnText: document.getElementById('copyBtnText'),
-    showQrBtn: document.getElementById('showQrBtn'),
-
-    joinDefaultContent: document.getElementById('joinDefaultContent'),
-    manualJoinInput: document.getElementById('manualJoinInput'),
-    manualJoinBtn: document.getElementById('manualJoinBtn'),
-    autoJoinState: document.getElementById('autoJoinState'),
-    autoJoinHostText: document.getElementById('autoJoinHostText'),
-    cancelJoinBtn: document.getElementById('cancelJoinBtn'),
-
-    // Offline & Bluetooth Buttons
-    autoFlipToggle: document.getElementById('autoFlipToggle'),
-    startPassPlayBtn: document.getElementById('startPassPlayBtn'),
-    bluetoothSupportBadge: document.getElementById('bluetoothSupportBadge'),
-    bluetoothDesc: document.getElementById('bluetoothDesc'),
-    scanBluetoothBtn: document.getElementById('scanBluetoothBtn'),
-    startBtSimulationBtn: document.getElementById('startBtSimulationBtn'),
-    startBroadcastWhiteBtn: document.getElementById('startBroadcastWhiteBtn'),
-    startBroadcastBlackBtn: document.getElementById('startBroadcastBlackBtn'),
-
-    // Chessboard & Players
+    // Board & Players
     chessBoard: document.getElementById('chessBoard'),
     floatingCheckBanner: document.getElementById('floatingCheckBanner'),
     floatingCheckText: document.getElementById('floatingCheckText'),
@@ -174,55 +134,82 @@
     selfColorBadge: document.getElementById('selfColorBadge'),
     selfAvatar: document.getElementById('selfAvatar'),
     selfTurnBadge: document.getElementById('selfTurnBadge'),
-    selfTurnText: document.getElementById('selfTurnText'),
     selfCapturedPieces: document.getElementById('selfCapturedPieces'),
     selfScoreAdvantage: document.getElementById('selfScoreAdvantage'),
     selfClockTime: document.getElementById('selfClockTime'),
     selfClockWrapper: document.getElementById('selfClockWrapper'),
 
-    // Utilities & Actions
-    takebackBtn: document.getElementById('takebackBtn'),
-    takebackBtnText: document.getElementById('takebackBtnText'),
-    flipBoardBtn: document.getElementById('flipBoardBtn'),
-    fenCopyBtn: document.getElementById('fenCopyBtn'),
-    offerDrawBtn: document.getElementById('offerDrawBtn'),
-    resignBtn: document.getElementById('resignBtn'),
-    navNewGameBtn: document.getElementById('navNewGameBtn'),
+    // Sidebar Tabs
+    sidebarTabs: document.querySelectorAll('.sidebar-tab-btn'),
+    sidebarTabContents: document.querySelectorAll('.sidebar-tab-content'),
 
-    // Status & Moves
-    moveCountBadge: document.getElementById('moveCountBadge'),
-    verdictStatusIcon: document.getElementById('verdictStatusIcon'),
+    // Mode Switcher Buttons
+    modeTabs: document.querySelectorAll('.mode-tab-btn'),
+    panelOnline: document.getElementById('panel-online'),
+    panelOfflineLocal: document.getElementById('panel-offline_local'),
+    panelBluetooth: document.getElementById('panel-bluetooth'),
+    panelOfflineTab: document.getElementById('panel-offline_tab'),
+
+    // Time Control Buttons
+    timerButtons: document.querySelectorAll('.timer-select-btn'),
+
+    // Mode Panels Controls
+    createGameBtn: document.getElementById('createGameBtn'),
+    hostInitialActions: document.getElementById('hostInitialActions'),
+    hostLinkBox: document.getElementById('hostLinkBox'),
+    shareLinkInput: document.getElementById('shareLinkInput'),
+    copyLinkBtn: document.getElementById('copyLinkBtn'),
+    copyIcon: document.getElementById('copyIcon'),
+    copyBtnText: document.getElementById('copyBtnText'),
+    showQrBtn: document.getElementById('showQrBtn'),
+    joinDefaultContent: document.getElementById('joinDefaultContent'),
+    manualJoinInput: document.getElementById('manualJoinInput'),
+    manualJoinBtn: document.getElementById('manualJoinBtn'),
+    autoJoinState: document.getElementById('autoJoinState'),
+    autoJoinHostText: document.getElementById('autoJoinHostText'),
+    cancelJoinBtn: document.getElementById('cancelJoinBtn'),
+
+    autoFlipToggle: document.getElementById('autoFlipToggle'),
+    startPassPlayBtn: document.getElementById('startPassPlayBtn'),
+    bluetoothSupportBadge: document.getElementById('bluetoothSupportBadge'),
+    bluetoothDesc: document.getElementById('bluetoothDesc'),
+    scanBluetoothBtn: document.getElementById('scanBluetoothBtn'),
+    startBtSimulationBtn: document.getElementById('startBtSimulationBtn'),
+    startBroadcastWhiteBtn: document.getElementById('startBroadcastWhiteBtn'),
+    startBroadcastBlackBtn: document.getElementById('startBroadcastBlackBtn'),
+
+    // Status / Quote in Sidebar
     verdictStatusTitle: document.getElementById('verdictStatusTitle'),
     verdictStatusDesc: document.getElementById('verdictStatusDesc'),
+    furinaQuoteText: document.getElementById('furinaQuoteText'),
+    moveCountBadge: document.getElementById('moveCountBadge'),
+
+    // Moves Tab
     moveLogContainer: document.getElementById('moveLogContainer'),
     emptyMovePlaceholder: document.getElementById('emptyMovePlaceholder'),
     moveLogList: document.getElementById('moveLogList'),
 
-    // Chat
-    chatChannelBadge: document.getElementById('chatChannelBadge'),
+    // Chat Tab
     chatMessages: document.getElementById('chatMessages'),
     chatForm: document.getElementById('chatForm'),
     chatInput: document.getElementById('chatInput'),
 
-    // Audio & Modals
-    bgMusicToggleBtn: document.getElementById('bgMusicToggleBtn'),
-    bgMusicIcon: document.getElementById('bgMusicIcon'),
-    bgMusicLabel: document.getElementById('bgMusicLabel'),
-    soundSettingsBtn: document.getElementById('soundSettingsBtn'),
-    soundSettingsModal: document.getElementById('soundSettingsModal'),
-    closeSoundSettingsBtn: document.getElementById('closeSoundSettingsBtn'),
-    dismissSoundSettingsBtn: document.getElementById('dismissSoundSettingsBtn'),
+    // Settings Tab & Audio Modal
+    soundStyleButtons: document.querySelectorAll('.sound-style-btn'),
     modalMusicToggleBtn: document.getElementById('modalMusicToggleBtn'),
     musicVolumeSlider: document.getElementById('musicVolumeSlider'),
     sfxVolumeSlider: document.getElementById('sfxVolumeSlider'),
     sfxVolumeLabel: document.getElementById('sfxVolumeLabel'),
-    soundStyleButtons: document.querySelectorAll('.sound-style-btn'),
 
-    helpModalBtn: document.getElementById('helpModalBtn'),
-    helpModal: document.getElementById('helpModal'),
-    closeHelpModalBtn: document.getElementById('closeHelpModalBtn'),
-    dismissHelpBtn: document.getElementById('dismissHelpBtn'),
+    // Bottom Action Bar
+    takebackBtn: document.getElementById('takebackBtn'),
+    takebackBtnText: document.getElementById('takebackBtnText'),
+    offerDrawBtn: document.getElementById('offerDrawBtn'),
+    resignBtn: document.getElementById('resignBtn'),
+    flipBoardBtn: document.getElementById('flipBoardBtn'),
+    fenCopyBtn: document.getElementById('fenCopyBtn'),
 
+    // Modals
     promotionModal: document.getElementById('promotionModal'),
     promoImgQ: document.getElementById('promoImgQ'),
     promoImgR: document.getElementById('promoImgR'),
@@ -245,19 +232,25 @@
     qrImage: document.getElementById('qrImage'),
     closeQrModalBtn: document.getElementById('closeQrModalBtn'),
 
+    soundSettingsModal: document.getElementById('soundSettingsModal'),
+    closeSoundSettingsBtn: document.getElementById('closeSoundSettingsBtn'),
+    dismissSoundSettingsBtn: document.getElementById('dismissSoundSettingsBtn'),
+
+    helpModal: document.getElementById('helpModal'),
+    closeHelpModalBtn: document.getElementById('closeHelpModalBtn'),
+    dismissHelpBtn: document.getElementById('dismissHelpBtn'),
+
     toastContainer: document.getElementById('toastContainer')
   };
 
   // ==========================================================================
-  // 3. WEB AUDIO SYNTHESIZER & FONTAINE WALTZ BACKGROUND MUSIC
+  // 3. WEB AUDIO SYNTHESIZER & WALTZ MUSIC
   // ==========================================================================
 
   function getAudioContext() {
     if (!audioCtx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        audioCtx = new AudioCtx();
-      }
+      if (AudioCtx) audioCtx = new AudioCtx();
     }
     if (audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume();
@@ -271,26 +264,23 @@
       const ctx = getAudioContext();
       if (!ctx) return;
       const now = ctx.currentTime;
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(soundVolume, now);
-      masterGain.connect(ctx.destination);
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(soundVolume, now);
+      master.connect(ctx.destination);
 
       if (soundStyle === 'arcade') {
-        // 8-BIT RETRO CHIPTUNE
-        playArcadeSound(ctx, masterGain, type, now);
+        playArcadeSound(ctx, master, type, now);
       } else if (soundStyle === 'modern') {
-        // MODERN MINIMAL GLASS
-        playModernSound(ctx, masterGain, type, now);
+        playModernSound(ctx, master, type, now);
       } else {
-        // FONTAINE OPERA (DEFAULT)
-        playOperaSound(ctx, masterGain, type, now);
+        playOperaSound(ctx, master, type, now);
       }
     } catch (e) {
       console.warn('Audio playback error:', e);
     }
   }
 
-  function playOperaSound(ctx, masterGain, type, now) {
+  function playOperaSound(ctx, master, type, now) {
     if (type === 'move') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -302,7 +292,7 @@
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.08);
 
@@ -317,7 +307,7 @@
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.12);
 
@@ -327,12 +317,10 @@
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now + i * 0.04);
-
         gain.gain.setValueAtTime(0.2, now + i * 0.04);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65 + i * 0.04);
-
         osc.connect(gain);
-        gain.connect(masterGain);
+        gain.connect(master);
         osc.start(now + i * 0.04);
         osc.stop(now + 0.7 + i * 0.04);
       });
@@ -343,12 +331,10 @@
         const gain = ctx.createGain();
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now + idx * 0.14);
-
         gain.gain.setValueAtTime(0.3, now + idx * 0.14);
         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.45);
-
         osc.connect(gain);
-        gain.connect(masterGain);
+        gain.connect(master);
         osc.start(now + idx * 0.14);
         osc.stop(now + idx * 0.14 + 0.46);
       });
@@ -359,28 +345,13 @@
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now + idx * 0.15);
-
         gain.gain.setValueAtTime(0.25, now + idx * 0.15);
         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.5);
-
         osc.connect(gain);
-        gain.connect(masterGain);
+        gain.connect(master);
         osc.start(now + idx * 0.15);
         osc.stop(now + idx * 0.15 + 0.52);
       });
-
-    } else if (type === 'tick') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(900, now);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start(now);
-      osc.stop(now + 0.04);
 
     } else if (type === 'droplet') {
       const osc = ctx.createOscillator();
@@ -388,18 +359,16 @@
       osc.type = 'sine';
       osc.frequency.setValueAtTime(800, now);
       osc.frequency.exponentialRampToValueAtTime(1400, now + 0.06);
-
       gain.gain.setValueAtTime(0.25, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.1);
     }
   }
 
-  function playArcadeSound(ctx, masterGain, type, now) {
+  function playArcadeSound(ctx, master, type, now) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
@@ -410,7 +379,7 @@
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.08);
 
@@ -420,30 +389,16 @@
       gain.gain.setValueAtTime(0.25, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.12);
 
-    } else if (type === 'check') {
-      [330, 440, 660].forEach((f, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'square';
-        o.frequency.setValueAtTime(f, now + i * 0.06);
-        g.gain.setValueAtTime(0.18, now + i * 0.06);
-        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.1);
-        o.connect(g);
-        g.connect(masterGain);
-        o.start(now + i * 0.06);
-        o.stop(now + i * 0.06 + 0.1);
-      });
-
     } else {
-      playOperaSound(ctx, masterGain, type, now);
+      playOperaSound(ctx, master, type, now);
     }
   }
 
-  function playModernSound(ctx, masterGain, type, now) {
+  function playModernSound(ctx, master, type, now) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -453,7 +408,7 @@
       gain.gain.setValueAtTime(0.25, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.04);
 
@@ -462,29 +417,29 @@
       gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.06);
 
     } else {
-      playOperaSound(ctx, masterGain, type, now);
+      playOperaSound(ctx, master, type, now);
     }
   }
 
-  // Procedural Fontaine Theatrical Waltz Synthesizer
+  // Procedural Fontaine Theatrical Waltz
   function toggleBackgroundMusic() {
     isMusicPlaying = !isMusicPlaying;
     if (isMusicPlaying) {
       startFontaineWaltz();
-      dom.bgMusicIcon.className = 'fa-solid fa-music text-fontaine-gold animate-bounce';
+      dom.bgMusicIcon.className = 'fa-solid fa-music text-hydro-400 animate-bounce';
       dom.bgMusicLabel.textContent = 'Waltz On';
-      dom.modalMusicToggleBtn.textContent = 'Pause Waltz';
-      showToast('Fontaine Theatrical Waltz commenced 🎭', 'info');
+      dom.modalMusicToggleBtn.textContent = 'Pause';
+      showToast('Fontaine Waltz playing 🎵', 'info');
     } else {
       stopFontaineWaltz();
-      dom.bgMusicIcon.className = 'fa-solid fa-music text-cyan-400';
+      dom.bgMusicIcon.className = 'fa-solid fa-music text-slate-400';
       dom.bgMusicLabel.textContent = 'Waltz Off';
-      dom.modalMusicToggleBtn.textContent = 'Play Waltz';
+      dom.modalMusicToggleBtn.textContent = 'Play';
       showToast('Waltz paused.', 'info');
     }
   }
@@ -494,7 +449,6 @@
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    // Waltz progression: F minor -> Bb minor -> C major -> F minor (3/4 time)
     const chords = [
       { bass: 87.31, chord: [261.63, 311.13, 392.00] }, // Fm
       { bass: 116.54, chord: [293.66, 349.23, 466.16] }, // Bbm
@@ -522,7 +476,6 @@
       const currentChord = chords[musicMeasure % chords.length];
 
       if (beat === 0) {
-        // Beat 1: Warm Cello Bass Note
         const bassOsc = ctx.createOscillator();
         const bassGain = ctx.createGain();
         bassOsc.type = 'triangle';
@@ -534,7 +487,6 @@
         bassOsc.start(now);
         bassOsc.stop(now + 0.6);
 
-        // Melody note on Beat 1
         const melOsc = ctx.createOscillator();
         const melGain = ctx.createGain();
         melOsc.type = 'sine';
@@ -547,7 +499,6 @@
         melOsc.stop(now + 0.5);
 
       } else {
-        // Beats 2 & 3: Delicate Fontaine Celesta / Harp Chords
         currentChord.chord.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -563,10 +514,8 @@
       }
 
       beat = (beat + 1) % 3;
-      if (beat === 0) {
-        musicMeasure++;
-      }
-    }, 450); // ~133 BPM in 3/4 waltz time
+      if (beat === 0) musicMeasure++;
+    }, 450);
   }
 
   function stopFontaineWaltz() {
@@ -577,7 +526,7 @@
   }
 
   // ==========================================================================
-  // 4. CHESS CLOCK & TIMER ENGINE
+  // 4. CHESS CLOCK & TIMER
   // ==========================================================================
 
   function resetClocks() {
@@ -588,7 +537,7 @@
   }
 
   function startClock() {
-    if (timePreset.base === 0) return; // Casual / No Clock
+    if (timePreset.base === 0) return;
     stopClock();
     clockRunning = true;
     lastClockTick = Date.now();
@@ -602,14 +551,10 @@
       const activeColor = game.turn();
       if (activeColor === 'w') {
         whiteTime = Math.max(0, whiteTime - delta);
-        if (whiteTime <= 0) {
-          handleTimeOut('w');
-        }
+        if (whiteTime <= 0) handleTimeOut('w');
       } else {
         blackTime = Math.max(0, blackTime - delta);
-        if (blackTime <= 0) {
-          handleTimeOut('b');
-        }
+        if (blackTime <= 0) handleTimeOut('b');
       }
 
       updateClockDisplay();
@@ -626,7 +571,6 @@
 
   function switchClockTurn() {
     if (timePreset.base === 0) return;
-    // Add increment to the player who just moved
     const prevColor = game.turn() === 'w' ? 'b' : 'w';
     if (prevColor === 'w') {
       whiteTime += timePreset.inc;
@@ -650,20 +594,18 @@
     dom.selfClockTime.textContent = formatTime(myTimeVal);
     dom.opponentClockTime.textContent = formatTime(oppTimeVal);
 
-    // Active clock highlight
     const isMyTurn = game.turn() === myColor;
     if (isMyTurn && clockRunning) {
-      dom.selfClockWrapper.className = 'chess-clock-box active-clock';
-      dom.opponentClockWrapper.className = 'chess-clock-box';
+      dom.selfClockWrapper.className = 'chess-clock active-clock';
+      dom.opponentClockWrapper.className = 'chess-clock';
     } else if (!isMyTurn && clockRunning) {
-      dom.selfClockWrapper.className = 'chess-clock-box';
-      dom.opponentClockWrapper.className = 'chess-clock-box active-clock';
+      dom.selfClockWrapper.className = 'chess-clock';
+      dom.opponentClockWrapper.className = 'chess-clock active-clock';
     } else {
-      dom.selfClockWrapper.className = 'chess-clock-box';
-      dom.opponentClockWrapper.className = 'chess-clock-box';
+      dom.selfClockWrapper.className = 'chess-clock';
+      dom.opponentClockWrapper.className = 'chess-clock';
     }
 
-    // Low time visual & sound cues
     applyLowTimeClasses(dom.selfClockWrapper, myTimeVal);
     applyLowTimeClasses(dom.opponentClockWrapper, oppTimeVal);
   }
@@ -695,60 +637,45 @@
     if (currentMode === 'offline_local') {
       const winnerName = winnerColor === 'w' ? 'White' : 'Black';
       playSound('victory');
-      triggerGameOverModal(
-        `Time Out! ${winnerName} Wins`,
-        `${flaggedColor === 'w' ? 'White' : 'Black'} has exhausted their clock.`,
-        FURINA_QUOTES.timeOut[0],
-        null
-      );
+      triggerGameOverModal(`Time Out! ${winnerName} Wins`, `${flaggedColor === 'w' ? 'White' : 'Black'} flagged.`, FURINA_QUOTES.timeOut[0], null);
     } else if (isWinner) {
       playSound('victory');
-      triggerGameOverModal(
-        'Victory on Time!',
-        'Opponent has flagged! Their allotted minutes have dissolved into the waters.',
-        FURINA_QUOTES.timeOut[0],
-        true
-      );
+      triggerGameOverModal('Victory on Time!', 'Opponent ran out of time!', FURINA_QUOTES.timeOut[0], true);
     } else {
       playSound('defeat');
-      triggerGameOverModal(
-        'Defeat on Time',
-        'Your chronometer has run dry. The verdict is rendered against you.',
-        FURINA_QUOTES.timeOut[1],
-        false
-      );
+      triggerGameOverModal('Defeat on Time', 'Your clock ran dry.', FURINA_QUOTES.timeOut[1], false);
     }
   }
 
   // ==========================================================================
-  // 5. TOAST NOTIFICATIONS & QUOTE ENGINE
+  // 5. TOAST NOTIFICATIONS & QUOTES
   // ==========================================================================
 
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `p-3 rounded-xl shadow-lg border backdrop-blur-md flex items-center gap-2.5 text-xs font-medium tracking-wide animate-scale-up transition-all duration-300 pointer-events-auto ${
+    toast.className = `p-2.5 px-3 rounded-lg shadow-xl border backdrop-blur-md flex items-center gap-2 text-xs font-medium tracking-wide animate-scale-up pointer-events-auto ${
       type === 'success'
-        ? 'bg-cyan-950/90 text-cyan-200 border-cyan-500/50'
+        ? 'bg-surface-900 text-hydro-300 border-hydro-500/40'
         : type === 'warning'
-        ? 'bg-amber-950/90 text-amber-200 border-amber-500/50'
+        ? 'bg-surface-900 text-amber-300 border-amber-500/40'
         : type === 'error'
-        ? 'bg-rose-950/90 text-rose-200 border-rose-500/50'
-        : 'bg-fontaine-900/90 text-fontaine-pearl border-fontaine-700'
+        ? 'bg-surface-900 text-rose-300 border-rose-500/40'
+        : 'bg-surface-900 text-slate-200 border-white/10'
     }`;
 
-    const iconClass =
-      type === 'success' ? 'fa-circle-check text-cyan-400' :
+    const icon =
+      type === 'success' ? 'fa-circle-check text-hydro-400' :
       type === 'warning' ? 'fa-triangle-exclamation text-amber-400' :
-      type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-fontaine-gold';
+      type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-slate-400';
 
-    toast.innerHTML = `<i class="fa-solid ${iconClass} text-sm shrink-0"></i><span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid ${icon} text-xs shrink-0"></i><span>${message}</span>`;
     dom.toastContainer.appendChild(toast);
 
     setTimeout(() => {
       toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      setTimeout(() => toast.remove(), 300);
-    }, 3800);
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(() => toast.remove(), 250);
+    }, 3200);
   }
 
   function setFurinaQuote(category) {
@@ -758,17 +685,21 @@
   }
 
   // ==========================================================================
-  // 6. CHESS ENGINE & BOARD INITIALIZATION
+  // 6. CHESS ENGINE & PHYSICAL PIECE MOVEMENT CONFIGURATION
   // ==========================================================================
 
   function initChess() {
     game = new Chess();
 
+    // Configure Chessboard with smooth physical slide speed & physics
     const config = {
       draggable: true,
       position: 'start',
       orientation: myColor === 'w' ? 'white' : 'black',
       pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+      moveSpeed: 230,      // Physical sliding glide duration (ms)
+      snapbackSpeed: 150,  // Physical bounce back on illegal move (ms)
+      snapSpeed: 70,       // Crisp square centering on drop (ms)
       onDragStart: handleDragStart,
       onDrop: handleDrop,
       onSnapEnd: handleSnapEnd
@@ -776,6 +707,7 @@
 
     board = Chessboard('chessBoard', config);
 
+    // Auto resize board on window resize
     window.addEventListener('resize', () => {
       if (board) {
         board.resize();
@@ -794,7 +726,6 @@
     if (game.game_over() || isGameOver) return false;
 
     if (currentMode === 'offline_local') {
-      // In local mode, only allow the piece whose turn it is
       const turn = game.turn();
       if ((turn === 'w' && piece.search(/^b/) !== -1) || (turn === 'b' && piece.search(/^w/) !== -1)) {
         return false;
@@ -803,9 +734,8 @@
       return true;
     }
 
-    // In online / multi-tab / bluetooth mode:
     if (!isConnected) {
-      showToast('Awaiting connection to opponent!', 'warning');
+      showToast('Connect with opponent to start playing!', 'warning');
       return false;
     }
 
@@ -840,16 +770,14 @@
     if (move === null) return 'snapback';
 
     onMoveExecuted(move);
-
-    // Broadcast move according to mode
     broadcastMove(move);
   }
 
   function handleSnapEnd() {
-    board.position(game.fen());
+    // Snap piece physically to square center
+    board.position(game.fen(), false);
     reapplyLastMoveHighlights();
 
-    // Auto-flip board in Pass & Play if enabled
     if (currentMode === 'offline_local' && autoFlipEnabled && !isGameOver) {
       const nextTurn = game.turn();
       board.orientation(nextTurn === 'w' ? 'white' : 'black');
@@ -877,7 +805,6 @@
       playSound('move');
     }
 
-    // Start clock on first move
     if (!clockRunning && timePreset.base > 0) {
       startClock();
     } else {
@@ -967,7 +894,7 @@
   }
 
   // ==========================================================================
-  // 9. PROMOTION MODAL LOGIC
+  // 9. PROMOTION MODAL
   // ==========================================================================
 
   function openPromotionModal() {
@@ -997,47 +924,48 @@
 
     const move = game.move({ from: source, to: target, promotion: pieceType });
     if (move) {
-      board.position(game.fen());
+      // Physical move animation
+      board.position(game.fen(), true);
       onMoveExecuted(move);
       broadcastMove(move);
     }
   }
 
   // ==========================================================================
-  // 10. MOVE TAKEBACK / UNDO PROTOCOL
+  // 10. MOVE TAKEBACK / UNDO
   // ==========================================================================
 
   function handleTakebackRequest() {
     if (game.history().length === 0) {
-      showToast('No moves have been made yet to retract.', 'warning');
+      showToast('No moves made yet.', 'warning');
       return;
     }
 
     if (currentMode === 'offline_local') {
-      // Local mode: immediate undo
       executeUndo();
-      showToast('Last move retracted by royal decree.', 'info');
+      showToast('Move retracted.', 'info');
       return;
     }
 
     if (!isConnected) {
-      showToast('Connect with an opponent to request takeback.', 'warning');
+      showToast('Connect with opponent to request takeback.', 'warning');
       return;
     }
 
-    // Online / Multi-tab: send request
     const packet = { type: 'takeback_request' };
     if (currentMode === 'online') sendWebRTC(packet);
     if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
 
-    showToast('Takeback petition submitted to opponent...', 'info');
+    showToast('Takeback request sent to opponent...', 'info');
   }
 
   function executeUndo() {
     const undone = game.undo();
     if (!undone) return;
 
-    board.position(game.fen());
+    // Physical slide back to previous state!
+    board.position(game.fen(), true);
+
     const hist = game.history({ verbose: true });
     if (hist.length > 0) {
       const last = hist[hist.length - 1];
@@ -1063,9 +991,7 @@
       playSound('check');
       dom.floatingCheckBanner.classList.remove('hidden');
       dom.floatingCheckBanner.classList.add('flex');
-      dom.floatingCheckText.textContent = isMyTurn
-        ? 'Check! Your Sovereign is Imperiled!'
-        : 'Opponent King is in Check!';
+      dom.floatingCheckText.textContent = isMyTurn ? 'Check! King imperiled!' : 'Opponent in Check!';
       setFurinaQuote('check');
     } else {
       dom.floatingCheckBanner.classList.add('hidden');
@@ -1080,28 +1006,13 @@
 
       if (currentMode === 'offline_local') {
         playSound('victory');
-        triggerGameOverModal(
-          'Checkmate!',
-          `${winnerColor === 'w' ? 'White' : 'Black'} delivers triumphant checkmate!`,
-          FURINA_QUOTES.checkmateWhite[0],
-          null
-        );
+        triggerGameOverModal('Checkmate!', `${winnerColor === 'w' ? 'White' : 'Black'} wins!`, FURINA_QUOTES.checkmateWhite[0], null);
       } else if (isWinner) {
         playSound('victory');
-        triggerGameOverModal(
-          'Victory by Checkmate!',
-          'Glorious triumph! You have vanquished the opposing sovereign.',
-          winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[0] : FURINA_QUOTES.checkmateBlack[0],
-          true
-        );
+        triggerGameOverModal('Victory by Checkmate!', 'Triumph! You have defeated the opposing sovereign.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[0] : FURINA_QUOTES.checkmateBlack[0], true);
       } else {
         playSound('defeat');
-        triggerGameOverModal(
-          'Defeat by Checkmate',
-          'The curtains fall upon your king. The verdict has been rendered against you.',
-          winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[1] : FURINA_QUOTES.checkmateBlack[1],
-          false
-        );
+        triggerGameOverModal('Defeat by Checkmate', 'The curtains fall upon your king.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[1] : FURINA_QUOTES.checkmateBlack[1], false);
       }
       return;
     }
@@ -1110,23 +1021,15 @@
       isGameOver = true;
       stopClock();
       playSound('defeat');
-      triggerGameOverModal('Stalemate (Draw)', 'No legal moves remain. Absolute stalemate!', FURINA_QUOTES.draw[0], null);
+      triggerGameOverModal('Stalemate (Draw)', 'No legal moves remain.', FURINA_QUOTES.draw[0], null);
       return;
     }
 
-    if (game.in_threefold_repetition()) {
+    if (game.in_threefold_repetition() || game.insufficient_material() || game.in_draw()) {
       isGameOver = true;
       stopClock();
       playSound('defeat');
-      triggerGameOverModal('Threefold Repetition', 'Exact position repeated thrice on stage. Draw.', FURINA_QUOTES.draw[1], null);
-      return;
-    }
-
-    if (game.insufficient_material() || game.in_draw()) {
-      isGameOver = true;
-      stopClock();
-      playSound('defeat');
-      triggerGameOverModal('Draw Declared', 'The court records an honorable draw.', FURINA_QUOTES.draw[0], null);
+      triggerGameOverModal('Draw Declared', 'The game concludes in a draw.', FURINA_QUOTES.draw[0], null);
       return;
     }
 
@@ -1142,11 +1045,11 @@
     dom.gameOverQuote.textContent = quote;
 
     if (isWinner === true) {
-      dom.gameOverIcon.className = 'fa-solid fa-trophy text-fontaine-gold';
+      dom.gameOverIcon.className = 'fa-solid fa-trophy text-gold-400';
     } else if (isWinner === false) {
       dom.gameOverIcon.className = 'fa-solid fa-heart-crack text-rose-400';
     } else {
-      dom.gameOverIcon.className = 'fa-solid fa-scale-balanced text-cyan-300';
+      dom.gameOverIcon.className = 'fa-solid fa-scale-balanced text-hydro-400';
     }
 
     dom.gameOverModal.classList.remove('hidden');
@@ -1171,49 +1074,41 @@
 
     if (currentMode === 'offline_local') {
       dom.selfTurnBadge.classList.remove('hidden');
-      dom.selfTurnBadge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-500/50';
-      dom.selfTurnText.textContent = `${currentTurnColor}'s Move`;
+      dom.selfTurnBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${currentTurnColor} to move`;
       dom.opponentTurnBadge.classList.add('hidden');
 
-      dom.verdictStatusTitle.textContent = `Local Duel: ${currentTurnColor} to Move`;
-      dom.verdictStatusDesc.textContent = 'Pass the device or play on the shared screen.';
-      dom.verdictStatusIcon.className = 'fa-solid fa-users text-cyan-400 mt-0.5';
+      dom.verdictStatusTitle.textContent = `Pass & Play: ${currentTurnColor}'s Move`;
+      dom.verdictStatusDesc.textContent = 'Play on the shared screen.';
 
     } else if (!isConnected) {
       dom.selfTurnBadge.classList.remove('hidden');
-      dom.selfTurnBadge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-950 text-amber-300 border border-amber-600/50';
-      dom.selfTurnText.textContent = 'Waiting for Opponent';
+      dom.selfTurnBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> waiting`;
       dom.opponentTurnBadge.classList.add('hidden');
 
-      dom.verdictStatusTitle.textContent = 'Awaiting Opponent Connection';
-      dom.verdictStatusDesc.textContent = 'Share your invitation link, scan QR, or pair devices to begin.';
-      dom.verdictStatusIcon.className = 'fa-solid fa-hourglass-half text-amber-400 mt-0.5';
+      dom.verdictStatusTitle.textContent = 'Awaiting Opponent';
+      dom.verdictStatusDesc.textContent = 'Share your invite link or connect devices to begin.';
 
     } else if (isGameOver) {
       dom.selfTurnBadge.classList.add('hidden');
       dom.opponentTurnBadge.classList.add('hidden');
-      dom.verdictStatusTitle.textContent = 'Stage Concluded';
-      dom.verdictStatusDesc.textContent = 'The duel has finished. You may request an Encore (Rematch).';
-      dom.verdictStatusIcon.className = 'fa-solid fa-flag-checkered text-fontaine-gold mt-0.5';
+      dom.verdictStatusTitle.textContent = 'Game Over';
+      dom.verdictStatusDesc.textContent = 'The duel has concluded.';
 
     } else if (isMyTurn) {
       dom.selfTurnBadge.classList.remove('hidden');
-      dom.selfTurnBadge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-500/50 animate-pulse';
-      dom.selfTurnText.textContent = 'Your Turn';
+      dom.selfTurnBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> your move`;
       dom.opponentTurnBadge.classList.add('hidden');
 
       dom.verdictStatusTitle.textContent = 'Your Move';
-      dom.verdictStatusDesc.textContent = `It is your turn (${myColor === 'w' ? 'White' : 'Black'}). Drag a piece to make your play.`;
-      dom.verdictStatusIcon.className = 'fa-solid fa-play text-emerald-400 mt-0.5';
+      dom.verdictStatusDesc.textContent = `Drag a piece to play (${myColor === 'w' ? 'White' : 'Black'}).`;
 
     } else {
       dom.selfTurnBadge.classList.add('hidden');
       dom.opponentTurnBadge.classList.remove('hidden');
       dom.opponentTurnBadge.classList.add('flex');
 
-      dom.verdictStatusTitle.textContent = "Challenger's Turn";
-      dom.verdictStatusDesc.textContent = `Waiting for opponent (${opponentColor === 'w' ? 'White' : 'Black'}) to enact their move...`;
-      dom.verdictStatusIcon.className = 'fa-solid fa-hourglass-start text-cyan-400 mt-0.5';
+      dom.verdictStatusTitle.textContent = "Opponent's Move";
+      dom.verdictStatusDesc.textContent = `Waiting for opponent (${opponentColor === 'w' ? 'White' : 'Black'})...`;
     }
 
     updateCapturedPieces();
@@ -1269,10 +1164,10 @@
     const oppCaptures = myColor === 'w' ? blackCaptures : whiteCaptures;
     const oppAdvantage = myColor === 'w' ? blackAdvantage : whiteAdvantage;
 
-    dom.selfCapturedPieces.textContent = myCaptures.map(p => symbols[p]).join(' ');
+    dom.selfCapturedPieces.textContent = myCaptures.map(p => symbols[p]).join('');
     dom.selfScoreAdvantage.textContent = myAdvantage > 0 ? `+${myAdvantage}` : '';
 
-    dom.opponentCapturedPieces.textContent = oppCaptures.map(p => symbols[p]).join(' ');
+    dom.opponentCapturedPieces.textContent = oppCaptures.map(p => symbols[p]).join('');
     dom.opponentScoreAdvantage.textContent = oppAdvantage > 0 ? `+${oppAdvantage}` : '';
   }
 
@@ -1294,12 +1189,12 @@
       const isLatestPair = i + 2 >= history.length;
 
       html += `
-        <div class="flex items-center justify-between px-2.5 py-1 rounded hover:bg-fontaine-900/60 transition text-xs ${
-          isLatestPair ? 'bg-cyan-950/40 border border-cyan-500/20' : ''
+        <div class="flex items-center px-2 py-1 rounded text-xs ${
+          isLatestPair ? 'bg-white/[0.06] text-white font-bold' : 'text-slate-300'
         }">
-          <span class="w-8 text-slate-500 font-bold">${moveNum}.</span>
-          <span class="flex-1 font-semibold text-slate-200 tracking-wide">${whiteMove}</span>
-          <span class="flex-1 font-semibold text-cyan-300 tracking-wide">${blackMove}</span>
+          <span class="w-8 text-slate-500 font-mono text-[11px]">${moveNum}.</span>
+          <span class="flex-1 font-mono">${whiteMove}</span>
+          <span class="flex-1 font-mono text-hydro-300">${blackMove}</span>
         </div>
       `;
     }
@@ -1309,7 +1204,7 @@
   }
 
   // ==========================================================================
-  // 13. WEBRTC & DATA HANDLING (PEERJS)
+  // 13. WEBRTC & DATA HANDLING (PHYSICAL PIECE ANIMATION ON RECEIVE)
   // ==========================================================================
 
   function sendWebRTC(data) {
@@ -1335,7 +1230,8 @@
         }
         if (data.fen && data.fen !== game.fen()) {
           game.load(data.fen);
-          board.position(data.fen);
+          // Physical animation to initial position
+          board.position(data.fen, true);
         }
         break;
 
@@ -1352,11 +1248,12 @@
         });
 
         if (move) {
-          board.position(game.fen());
+          // CRITICAL: board.position(game.fen(), true) executes physical piece slide!
+          board.position(game.fen(), true);
           onMoveExecuted(move);
         } else if (data.fen) {
           game.load(data.fen);
-          board.position(data.fen);
+          board.position(data.fen, true);
           updateUI();
           checkGameStatus();
         }
@@ -1371,9 +1268,9 @@
       case 'takeback_response':
         if (data.accepted) {
           executeUndo();
-          showToast('Takeback petition granted! The stage rewinds.', 'success');
+          showToast('Takeback granted! Move rewound.', 'success');
         } else {
-          showToast('Opponent declined your takeback petition.', 'warning');
+          showToast('Opponent declined takeback.', 'warning');
         }
         break;
 
@@ -1384,7 +1281,7 @@
 
       case 'draw_offer':
         playSound('check');
-        const acceptDraw = confirm('⚖️ Opponent offers a peaceful conclusion (Draw). Accept?');
+        const acceptDraw = confirm('Opponent offers a draw. Accept?');
         const drawResp = { type: 'draw_response', accepted: acceptDraw };
         if (currentMode === 'online') sendWebRTC(drawResp);
         if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(drawResp);
@@ -1392,7 +1289,7 @@
         if (acceptDraw) {
           isGameOver = true;
           stopClock();
-          triggerGameOverModal('Draw by Agreement', 'Both sovereigns concluded the duel in peace.', FURINA_QUOTES.draw[0], null);
+          triggerGameOverModal('Draw Agreed', 'Both players agreed to a draw.', FURINA_QUOTES.draw[0], null);
         }
         break;
 
@@ -1400,9 +1297,9 @@
         if (data.accepted) {
           isGameOver = true;
           stopClock();
-          triggerGameOverModal('Draw by Agreement', 'Opponent accepted the offer of a draw.', FURINA_QUOTES.draw[0], null);
+          triggerGameOverModal('Draw Agreed', 'Opponent accepted the draw.', FURINA_QUOTES.draw[0], null);
         } else {
-          showToast('Opponent declined the draw offer.', 'warning');
+          showToast('Draw offer declined.', 'warning');
         }
         break;
 
@@ -1410,27 +1307,25 @@
         isGameOver = true;
         stopClock();
         playSound('victory');
-        triggerGameOverModal('Victory by Resignation!', 'Opponent conceded the stage to your sovereign authority.', FURINA_QUOTES.checkmateWhite[0], true);
+        triggerGameOverModal('Victory by Resignation!', 'Opponent resigned.', FURINA_QUOTES.checkmateWhite[0], true);
         break;
 
       case 'rematch_offer':
         playSound('check');
-        const acceptRematch = confirm('🎭 Opponent requests an ENCORE (Rematch). Accept?');
+        const acceptRematch = confirm('Opponent requests a rematch. Accept?');
         const remResp = { type: 'rematch_response', accepted: acceptRematch };
         if (currentMode === 'online') sendWebRTC(remResp);
         if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(remResp);
 
-        if (acceptRematch) {
-          executeRematch();
-        }
+        if (acceptRematch) executeRematch();
         break;
 
       case 'rematch_response':
         if (data.accepted) {
           executeRematch();
-          showToast('Rematch accepted! The curtains rise anew.', 'success');
+          showToast('Rematch accepted!', 'success');
         } else {
-          showToast('Opponent declined the rematch offer.', 'warning');
+          showToast('Rematch declined.', 'warning');
         }
         break;
     }
@@ -1454,15 +1349,13 @@
 
     peer.on('open', (id) => {
       myPeerId = id;
-      dom.hostPeerBadge.textContent = `ID: ${id.substring(0, 8)}...`;
-
       const shareUrl = `${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(id)}`;
       dom.shareLinkInput.value = shareUrl;
       dom.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
 
-      updateConnectionPill('waiting', 'Awaiting Challenger');
+      updateConnectionPill('waiting', 'Awaiting Opponent');
       setFurinaQuote('welcome');
-      showToast('Stage initialized! Share your invite link.', 'success');
+      showToast('Game created! Share invite link.', 'success');
     });
 
     peer.on('connection', (incomingConn) => {
@@ -1488,21 +1381,19 @@
 
     board.orientation('black');
 
-    dom.selfName.textContent = 'You (Challenger)';
+    dom.selfName.textContent = 'You (Black)';
     dom.selfColorBadge.textContent = 'Black';
-    dom.selfColorBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700';
     dom.selfAvatar.innerHTML = '<i class="fa-solid fa-chess-knight"></i>';
 
-    dom.opponentName.textContent = 'Host (Lady Furina)';
+    dom.opponentName.textContent = 'Host (White)';
     dom.opponentColorBadge.textContent = 'White';
-    dom.opponentColorBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700';
-    dom.opponentAvatar.innerHTML = '<i class="fa-solid fa-crown text-fontaine-gold"></i>';
+    dom.opponentAvatar.innerHTML = '<i class="fa-solid fa-crown text-gold-400"></i>';
 
     dom.joinDefaultContent.classList.add('hidden');
     dom.autoJoinState.classList.remove('hidden');
-    dom.autoJoinHostText.textContent = `Connecting to Host ID: ${hostPeerId.substring(0, 10)}...`;
+    dom.autoJoinHostText.textContent = `Connecting to Host: ${hostPeerId.substring(0, 10)}...`;
 
-    updateConnectionPill('connecting', 'Connecting to Host...');
+    updateConnectionPill('connecting', 'Connecting...');
 
     peer = new Peer({ debug: 1 });
 
@@ -1515,7 +1406,7 @@
     peer.on('error', (err) => {
       console.error('PeerJS Joiner Error:', err);
       updateConnectionPill('disconnected', 'Connection Failed');
-      showToast('Could not establish connection to host.', 'error');
+      showToast('Could not connect to host.', 'error');
     });
   }
 
@@ -1526,10 +1417,11 @@
       isConnected = true;
       isGameOver = false;
 
-      updateConnectionPill('connected', 'Stage Active (P2P)');
-      dom.lobbySection.classList.add('hidden');
-
+      updateConnectionPill('connected', 'Live (P2P)');
       resetClocks();
+
+      // Switch to Moves tab automatically when game begins
+      switchSidebarTab('tab-moves');
 
       if (isHost) {
         sendWebRTC({
@@ -1545,13 +1437,11 @@
       playSound('victory');
       setFurinaQuote('gameStart');
       showToast(
-        isHost
-          ? 'Challenger entered the Opera! You are White (First Move).'
-          : 'Connected to Host! You are Black (Host moves first).',
+        isHost ? 'Challenger connected! White moves first.' : 'Connected to host! White moves first.',
         'success'
       );
 
-      appendChatMessage('Court System', 'WebRTC Data Channel established.', 'system');
+      appendChatMessage('System', 'P2P WebRTC data connection established.', 'system');
       updateUI();
     });
 
@@ -1560,17 +1450,17 @@
     connection.on('close', () => {
       isConnected = false;
       stopClock();
-      updateConnectionPill('disconnected', 'Opponent Disconnected');
+      updateConnectionPill('disconnected', 'Disconnected');
       playSound('defeat');
       setFurinaQuote('disconnect');
-      showToast('Opponent severed connection.', 'error');
-      appendChatMessage('Court System', 'Opponent disconnected.', 'system');
+      showToast('Opponent disconnected.', 'error');
+      appendChatMessage('System', 'Opponent disconnected.', 'system');
       updateUI();
     });
 
     connection.on('error', (err) => {
       console.error('Connection channel error:', err);
-      showToast('P2P connection channel encountered an error.', 'error');
+      showToast('Connection error encountered.', 'error');
     });
   }
 
@@ -1580,29 +1470,30 @@
     isConnected = true;
     isGameOver = false;
 
-    dom.lobbySection.classList.add('hidden');
-    updateConnectionPill('connected', 'Local Pass & Play');
+    updateConnectionPill('connected', 'Pass & Play');
 
     dom.selfName.textContent = 'Player 1 (White)';
     dom.selfColorBadge.textContent = 'White';
     dom.opponentName.textContent = 'Player 2 (Black)';
     dom.opponentColorBadge.textContent = 'Black';
 
-    dom.takebackBtnText.textContent = 'Undo Move';
+    dom.takebackBtnText.textContent = 'Undo';
 
     resetClocks();
     game.reset();
-    board.position('start');
+    board.position('start', true);
     board.orientation('white');
+
+    switchSidebarTab('tab-moves');
 
     playSound('victory');
     setFurinaQuote('gameStart');
-    showToast('Local Pass & Play duel commenced!', 'success');
-    appendChatMessage('Court System', 'Local 2-Player Pass & Play mode active.', 'system');
+    showToast('Local Pass & Play started!', 'success');
+    appendChatMessage('System', 'Local Pass & Play mode active.', 'system');
     updateUI();
   }
 
-  // --- OFFLINE MULTI-TAB DUAL WINDOW MODE ---
+  // --- MULTI-TAB DUAL WINDOW MODE ---
   function initMultiTabOffline(role) {
     currentMode = 'offline_tab';
     isConnected = true;
@@ -1614,11 +1505,8 @@
     }
 
     broadcastChan = new BroadcastChannel('fontaine_offline_chess_channel');
-    broadcastChan.onmessage = (e) => {
-      handleIncomingData(e.data);
-    };
+    broadcastChan.onmessage = (e) => handleIncomingData(e.data);
 
-    dom.lobbySection.classList.add('hidden');
     updateConnectionPill('connected', `Offline Window (${role === 'w' ? 'White' : 'Black'})`);
 
     myColor = role;
@@ -1632,7 +1520,9 @@
 
     resetClocks();
     game.reset();
-    board.position('start');
+    board.position('start', true);
+
+    switchSidebarTab('tab-moves');
 
     if (role === 'w') {
       broadcastChan.postMessage({
@@ -1646,74 +1536,57 @@
 
     playSound('victory');
     setFurinaQuote('gameStart');
-    showToast(`Offline Dual-Window started as ${role === 'w' ? 'White' : 'Black'}!`, 'success');
-    appendChatMessage('Court System', 'Offline same-device channel active.', 'system');
+    showToast(`Started dual window as ${role === 'w' ? 'White' : 'Black'}!`, 'success');
+    appendChatMessage('System', 'Offline dual-window channel active.', 'system');
     updateUI();
   }
 
-  // --- WEB BLUETOOTH CONNECTIVITY ---
+  // --- WEB BLUETOOTH ---
   function checkBluetoothSupport() {
     if ('bluetooth' in navigator) {
       dom.bluetoothSupportBadge.textContent = 'Supported';
-      dom.bluetoothSupportBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-500/50';
-      dom.bluetoothDesc.textContent = 'Web Bluetooth API is available. Click below to pair with a Bluetooth LE device or peripheral.';
+      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300';
+      dom.bluetoothDesc.textContent = 'Web Bluetooth API is available. Click below to pair.';
     } else {
       dom.bluetoothSupportBadge.textContent = 'Not Supported';
-      dom.bluetoothSupportBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-rose-950 text-rose-300 border border-rose-500/50';
-      dom.bluetoothDesc.textContent = 'Web Bluetooth is not supported in this browser engine. Use Chrome, Edge, or Opera on Windows 10/11, macOS, or Android.';
+      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-rose-950 text-rose-300';
+      dom.bluetoothDesc.textContent = 'Web Bluetooth not supported on this browser engine.';
     }
   }
 
   async function requestBluetoothConnection() {
     if (!('bluetooth' in navigator)) {
-      showToast('Web Bluetooth API is not supported in this browser.', 'error');
+      showToast('Web Bluetooth not supported.', 'error');
       return;
     }
 
     try {
-      showToast('Opening Bluetooth scan dialogue...', 'info');
-      bluetoothDevice = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true
-      });
+      showToast('Scanning for Bluetooth devices...', 'info');
+      bluetoothDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
 
       if (bluetoothDevice) {
-        showToast(`Paired with Bluetooth Device: ${bluetoothDevice.name || 'Unknown'}`, 'success');
+        showToast(`Paired: ${bluetoothDevice.name || 'Bluetooth Device'}`, 'success');
         updateConnectionPill('connected', `BT: ${bluetoothDevice.name || 'Device'}`);
-        dom.lobbySection.classList.add('hidden');
         isConnected = true;
         updateUI();
       }
     } catch (e) {
       if (e.name !== 'NotFoundError') {
         console.error('Bluetooth error:', e);
-        showToast(`Bluetooth pairing cancelled or failed: ${e.message}`, 'warning');
+        showToast(`Bluetooth pairing failed: ${e.message}`, 'warning');
       }
     }
   }
 
   function updateConnectionPill(status, text) {
     dom.connectionPillText.textContent = text;
-    dom.connectionPill.className =
-      'shrink-0 flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ' +
-      (status === 'connected'
-        ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
-        : status === 'waiting'
-        ? 'bg-cyan-950/80 border border-cyan-500/50 text-cyan-300'
-        : status === 'connecting'
-        ? 'bg-amber-950/80 border border-amber-500/50 text-amber-300'
-        : 'bg-rose-950/80 border border-rose-500/50 text-rose-300');
-
     const dot = dom.connectionPill.querySelector('span:first-child');
     if (dot) {
       dot.className =
-        'w-2 h-2 rounded-full ' +
-        (status === 'connected'
-          ? 'bg-emerald-400'
-          : status === 'waiting'
-          ? 'bg-cyan-400 animate-ping'
-          : status === 'connecting'
-          ? 'bg-amber-400 animate-ping'
-          : 'bg-rose-400');
+        'w-1.5 h-1.5 rounded-full ' +
+        (status === 'connected' ? 'bg-emerald-400' :
+         status === 'waiting' ? 'bg-hydro-400 animate-ping' :
+         status === 'connecting' ? 'bg-amber-400 animate-ping' : 'bg-rose-400');
     }
   }
 
@@ -1726,25 +1599,23 @@
     const bubble = document.createElement('div');
 
     if (type === 'self') {
-      bubble.className = 'chat-bubble-self p-2.5 max-w-[85%] ml-auto text-cyan-100 shadow-sm';
+      bubble.className = 'chat-bubble-self p-2 max-w-[85%] ml-auto text-hydro-200 text-xs';
       bubble.innerHTML = `
-        <div class="flex items-center justify-between gap-3 text-[10px] text-cyan-300 font-semibold mb-0.5">
-          <span>You</span>
-          <span class="text-slate-400 text-[9px]">${time}</span>
+        <div class="flex items-center justify-between gap-2 text-[9px] text-hydro-400 font-semibold mb-0.5">
+          <span>You</span><span>${time}</span>
         </div>
-        <p class="text-xs break-words">${escapeHTML(text)}</p>
+        <p class="break-words">${escapeHTML(text)}</p>
       `;
     } else if (type === 'opponent') {
-      bubble.className = 'chat-bubble-opponent p-2.5 max-w-[85%] mr-auto text-slate-200 shadow-sm';
+      bubble.className = 'chat-bubble-opponent p-2 max-w-[85%] mr-auto text-slate-200 text-xs';
       bubble.innerHTML = `
-        <div class="flex items-center justify-between gap-3 text-[10px] text-fontaine-gold font-semibold mb-0.5">
-          <span>${escapeHTML(sender)}</span>
-          <span class="text-slate-400 text-[9px]">${time}</span>
+        <div class="flex items-center justify-between gap-2 text-[9px] text-gold-400 font-semibold mb-0.5">
+          <span>${escapeHTML(sender)}</span><span>${time}</span>
         </div>
-        <p class="text-xs break-words">${escapeHTML(text)}</p>
+        <p class="break-words">${escapeHTML(text)}</p>
       `;
     } else {
-      bubble.className = 'chat-bubble-system p-2 text-center text-[10.5px] text-fontaine-gold italic';
+      bubble.className = 'p-1.5 text-center text-[10.5px] text-slate-400 italic';
       bubble.textContent = text;
     }
 
@@ -1757,7 +1628,7 @@
     const cleanText = text.trim();
 
     if (!isConnected) {
-      showToast('Connect with an opponent to send messages!', 'warning');
+      showToast('Connect with opponent to chat!', 'warning');
       return;
     }
 
@@ -1782,7 +1653,8 @@
     }
 
     board.orientation(myColor === 'w' ? 'white' : 'black');
-    board.position('start');
+    // Physical piece movement to start positions
+    board.position('start', true);
 
     isGameOver = false;
     lastMoveSquares = { from: null, to: null };
@@ -1792,7 +1664,7 @@
     updateUI();
     setFurinaQuote('gameStart');
     playSound('victory');
-    showToast('Rematch started! The stage is renewed.', 'success');
+    showToast('Rematch started! Curtains rise.', 'success');
   }
 
   function escapeHTML(str) {
@@ -1806,21 +1678,74 @@
   }
 
   // ==========================================================================
-  // 16. EVENT BINDINGS
+  // 16. TAB NAVIGATION & MODE SWITCHER
+  // ==========================================================================
+
+  function switchSidebarTab(targetTabId) {
+    dom.sidebarTabs.forEach(tab => {
+      if (tab.getAttribute('data-tab') === targetTabId) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    dom.sidebarTabContents.forEach(content => {
+      if (content.id === targetTabId) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+  }
+
+  function switchGameMode(mode) {
+    currentMode = mode;
+    dom.panelOnline.classList.add('hidden');
+    dom.panelOfflineLocal.classList.add('hidden');
+    dom.panelBluetooth.classList.add('hidden');
+    dom.panelOfflineTab.classList.add('hidden');
+
+    if (mode === 'online') {
+      dom.panelOnline.classList.remove('hidden');
+      updateConnectionPill('waiting', 'Ready to Host');
+    } else if (mode === 'offline_local') {
+      dom.panelOfflineLocal.classList.remove('hidden');
+      updateConnectionPill('waiting', 'Pass & Play Ready');
+    } else if (mode === 'bluetooth') {
+      dom.panelBluetooth.classList.remove('hidden');
+      checkBluetoothSupport();
+      updateConnectionPill('waiting', 'Bluetooth Ready');
+    } else if (mode === 'offline_tab') {
+      dom.panelOfflineTab.classList.remove('hidden');
+      updateConnectionPill('waiting', 'Dual Window Ready');
+    }
+  }
+
+  // ==========================================================================
+  // 17. EVENT BINDINGS & APP INITIALIZATION
   // ==========================================================================
 
   function bindEvents() {
-    // Mode Switcher Tabs
-    dom.modeTabs.forEach(tab => {
+    // Sidebar Tabs
+    dom.sidebarTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
-        dom.modeTabs.forEach(t => t.classList.remove('active'));
+        const targetTab = e.currentTarget.getAttribute('data-tab');
+        switchSidebarTab(targetTab);
+      });
+    });
+
+    // Mode Switcher Buttons
+    dom.modeTabs.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        dom.modeTabs.forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
         const mode = e.currentTarget.getAttribute('data-mode');
         switchGameMode(mode);
       });
     });
 
-    // Time Control Presets
+    // Timer Selector Buttons
     dom.timerButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         dom.timerButtons.forEach(b => b.classList.remove('active'));
@@ -1829,36 +1754,34 @@
         const inc = parseInt(e.currentTarget.getAttribute('data-inc'), 10);
         timePreset = { base, inc };
         resetClocks();
-        showToast(`Timer set: ${base === 0 ? 'No Clock' : formatTime(base) + (inc ? ' +' + inc + 's' : '')}`, 'info');
+        showToast(`Clock set: ${base === 0 ? 'No Clock' : formatTime(base) + (inc ? ' +' + inc + 's' : '')}`, 'info');
       });
     });
 
-    // Host Button
+    // Host & Join Buttons
     dom.createGameBtn.addEventListener('click', () => initHost());
 
-    // Copy Link Button
     dom.copyLinkBtn.addEventListener('click', () => {
       const shareUrl = dom.shareLinkInput.value;
       if (!shareUrl || shareUrl.startsWith('Generating')) return;
 
       navigator.clipboard.writeText(shareUrl).then(() => {
         dom.copyIcon.className = 'fa-solid fa-check text-emerald-400';
-        dom.copyBtnText.textContent = 'Copied!';
-        showToast('Stage invitation link copied!', 'success');
+        dom.copyBtnText.textContent = 'Copied';
+        showToast('Link copied!', 'success');
         playSound('droplet');
 
         setTimeout(() => {
           dom.copyIcon.className = 'fa-solid fa-copy';
-          dom.copyBtnText.textContent = 'Copy Link';
-        }, 2500);
+          dom.copyBtnText.textContent = 'Copy';
+        }, 2200);
       }).catch(() => {
         dom.shareLinkInput.select();
         document.execCommand('copy');
-        showToast('Link copied to clipboard!', 'success');
+        showToast('Link copied!', 'success');
       });
     });
 
-    // Manual Join Button
     dom.manualJoinBtn.addEventListener('click', () => {
       let val = dom.manualJoinInput.value.trim();
       if (!val) return;
@@ -1867,8 +1790,8 @@
           const url = new URL(val);
           val = url.searchParams.get('join') || val;
         } catch (e) {
-          const match = val.match(/\?join=([^&#]+)/);
-          if (match) val = match[1];
+          const m = val.match(/\?join=([^&#]+)/);
+          if (m) val = m[1];
         }
       }
       initJoiner(val);
@@ -1888,7 +1811,7 @@
       dom.qrModal.classList.remove('flex');
     });
 
-    // Offline & Bluetooth Buttons
+    // Pass & Play, Bluetooth, Multi-Tab Buttons
     dom.startPassPlayBtn.addEventListener('click', () => startOfflinePassPlay());
     dom.autoFlipToggle.addEventListener('change', (e) => {
       autoFlipEnabled = e.target.checked;
@@ -1900,7 +1823,7 @@
     dom.startBroadcastWhiteBtn.addEventListener('click', () => initMultiTabOffline('w'));
     dom.startBroadcastBlackBtn.addEventListener('click', () => initMultiTabOffline('b'));
 
-    // In-game Utilities
+    // In-game Bottom Bar Buttons
     dom.takebackBtn.addEventListener('click', () => handleTakebackRequest());
     dom.flipBoardBtn.addEventListener('click', () => {
       board.flip();
@@ -1909,24 +1832,24 @@
 
     dom.fenCopyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(game.fen()).then(() => {
-        showToast('FEN notation copied to clipboard!', 'success');
+        showToast('FEN copied!', 'success');
         playSound('droplet');
       });
     });
 
     dom.offerDrawBtn.addEventListener('click', () => {
       if (!isConnected || isGameOver) return;
-      if (confirm('Offer a draw to your opponent?')) {
+      if (confirm('Offer a draw to opponent?')) {
         const packet = { type: 'draw_offer' };
         if (currentMode === 'online') sendWebRTC(packet);
         if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
-        showToast('Draw offer transmitted.', 'info');
+        showToast('Draw offer sent.', 'info');
       }
     });
 
     dom.resignBtn.addEventListener('click', () => {
       if (!isConnected || isGameOver) return;
-      if (confirm('Are you certain you wish to concede the stage (Resign)?')) {
+      if (confirm('Resign this game?')) {
         const packet = { type: 'resign', player: myColor };
         if (currentMode === 'online') sendWebRTC(packet);
         if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
@@ -1934,12 +1857,12 @@
         isGameOver = true;
         stopClock();
         playSound('defeat');
-        triggerGameOverModal('You Have Conceded', 'You surrendered the stage.', FURINA_QUOTES.checkmateBlack[1], false);
+        triggerGameOverModal('You Have Resigned', 'You surrendered the duel.', FURINA_QUOTES.checkmateBlack[1], false);
       }
     });
 
     dom.navNewGameBtn.addEventListener('click', () => {
-      if (confirm('Start a new duel session? This resets the current board.')) {
+      if (confirm('Start a new game session?')) {
         window.location.href = window.location.origin + window.location.pathname;
       }
     });
@@ -1965,7 +1888,7 @@
       if (currentMode === 'online') sendWebRTC(packet);
       if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
 
-      showToast('Takeback petition declined.', 'info');
+      showToast('Takeback declined.', 'info');
     });
 
     // Rematch
@@ -1981,7 +1904,7 @@
       const packet = { type: 'rematch_offer' };
       if (currentMode === 'online') sendWebRTC(packet);
       if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
-      showToast('Encore requested! Awaiting opponent...', 'info');
+      showToast('Rematch requested...', 'info');
     });
 
     dom.closeGameOverModalBtn.addEventListener('click', closeGameOverModal);
@@ -1994,21 +1917,12 @@
       });
     });
 
-    // Audio & Sound Controls
+    // Music & Sounds
     dom.bgMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
     dom.modalMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
 
     dom.soundSettingsBtn.addEventListener('click', () => {
-      dom.soundSettingsModal.classList.remove('hidden');
-      dom.soundSettingsModal.classList.add('flex');
-    });
-    dom.closeSoundSettingsBtn.addEventListener('click', () => {
-      dom.soundSettingsModal.classList.add('hidden');
-      dom.soundSettingsModal.classList.remove('flex');
-    });
-    dom.dismissSoundSettingsBtn.addEventListener('click', () => {
-      dom.soundSettingsModal.classList.add('hidden');
-      dom.soundSettingsModal.classList.remove('flex');
+      switchSidebarTab('tab-settings');
     });
 
     dom.soundStyleButtons.forEach(btn => {
@@ -2017,7 +1931,7 @@
         e.currentTarget.classList.add('active');
         soundStyle = e.currentTarget.getAttribute('data-style');
         playSound('move');
-        showToast(`Sound style set to: ${soundStyle.toUpperCase()}`, 'info');
+        showToast(`Sound theme: ${soundStyle.toUpperCase()}`, 'info');
       });
     });
 
@@ -2030,7 +1944,7 @@
       musicVolume = parseInt(e.target.value, 10) / 100;
     });
 
-    // Help Modal
+    // Protocol Help Modal
     dom.helpModalBtn.addEventListener('click', () => {
       dom.helpModal.classList.remove('hidden');
       dom.helpModal.classList.add('flex');
@@ -2058,37 +1972,6 @@
     });
   }
 
-  function switchGameMode(mode) {
-    currentMode = mode;
-    dom.onlineLobbyGrid.classList.add('hidden');
-    dom.offlinePassPlayLobby.classList.add('hidden');
-    dom.bluetoothLobby.classList.add('hidden');
-    dom.offlineMultiTabLobby.classList.add('hidden');
-
-    if (mode === 'online') {
-      dom.onlineLobbyGrid.classList.remove('hidden');
-      dom.activeModeBadgeText.textContent = 'Mode: Online P2P';
-      updateConnectionPill('waiting', 'Stage Ready to Host');
-    } else if (mode === 'offline_local') {
-      dom.offlinePassPlayLobby.classList.remove('hidden');
-      dom.activeModeBadgeText.textContent = 'Mode: Pass & Play';
-      updateConnectionPill('waiting', 'Local Offline Ready');
-    } else if (mode === 'bluetooth') {
-      dom.bluetoothLobby.classList.remove('hidden');
-      dom.activeModeBadgeText.textContent = 'Mode: Bluetooth Duel';
-      checkBluetoothSupport();
-      updateConnectionPill('waiting', 'Bluetooth Scanner Ready');
-    } else if (mode === 'offline_tab') {
-      dom.offlineMultiTabLobby.classList.remove('hidden');
-      dom.activeModeBadgeText.textContent = 'Mode: Dual Window';
-      updateConnectionPill('waiting', 'Multi-Tab Offline Ready');
-    }
-  }
-
-  // ==========================================================================
-  // 17. APP INITIALIZATION
-  // ==========================================================================
-
   function initApp() {
     initChess();
     bindEvents();
@@ -2105,7 +1988,7 @@
       myColor = 'w';
       opponentColor = 'b';
       board.orientation('white');
-      updateConnectionPill('waiting', 'Stage Ready to Host');
+      updateConnectionPill('waiting', 'Ready to Host');
     }
   }
 

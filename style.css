@@ -1,219 +1,32 @@
 /* ==========================================================================
-   OPÉRA ÉPICLESSE — FURINA P2P & OFFLINE CHESS THEME
-   Fontaine / Hydro Archon Aesthetic Stylesheet
+   MINIMALIST CHESS.COM-STYLE THEME (FURINA ACCENTS)
+   Clean, Unboxed, High-Performance Stylesheet
    ========================================================================== */
 
 :root {
-  --color-fontaine-deep: #050c18;
-  --color-fontaine-card: rgba(13, 30, 56, 0.88);
-  --color-fontaine-border: rgba(56, 189, 248, 0.28);
-  --color-fontaine-gold: #f5d061;
-  --color-fontaine-gold-hover: #e5be49;
-  --color-fontaine-hydro: #00d2ff;
-  --color-fontaine-hydro-glow: rgba(0, 210, 255, 0.45);
-  
-  /* Custom Chessboard Squares */
-  --square-light: #e0f2fe; /* Crystalline Hydro Frost */
-  --square-light-text: #0f2744;
-  --square-dark: #1b385a;  /* Deep Fontaine Oceanic Navy */
-  --square-dark-text: #e0f2fe;
+  --bg-main: #0b0e14;
+  --bg-sidebar: #111620;
+  --bg-clock: #161d2b;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+
+  /* Chessboard Squares: Clean Minimalist High-Contrast Slate/Hydro */
+  --square-light: #ebecd0;
+  --square-light-coord: #739552;
+  --square-dark: #2c4d6f;
+  --square-dark-coord: #ebecd0;
+
+  --accent-hydro: #00d2ff;
+  --accent-gold: #f5d061;
 }
 
-/* Base Body & Layout */
 body {
-  background-color: var(--color-fontaine-deep);
-  background-image: 
-    radial-gradient(ellipse at 50% -10%, rgba(0, 210, 255, 0.12) 0%, transparent 65%),
-    radial-gradient(circle at 85% 30%, rgba(30, 58, 138, 0.18) 0%, transparent 50%),
-    radial-gradient(circle at 15% 70%, rgba(14, 116, 144, 0.15) 0%, transparent 55%);
+  background-color: var(--bg-main);
+  background-image: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.04) 0%, transparent 60%);
   background-attachment: fixed;
 }
 
-/* Radial Vignette */
-.bg-radial-vignette {
-  background: radial-gradient(circle at center, transparent 35%, rgba(5, 12, 24, 0.95) 100%);
-}
-
-/* Fontaine Glassmorphic Card */
-.card-fontaine {
-  background: var(--color-fontaine-card);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--color-fontaine-border);
-  box-shadow: 0 12px 36px -8px rgba(0, 10, 25, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  position: relative;
-}
-
-.card-fontaine:hover {
-  border-color: rgba(56, 189, 248, 0.45);
-}
-
-/* Ornate Fontaine Gold Corner Flourishes */
-.corner-gold-tl, .corner-gold-br {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.corner-gold-tl {
-  top: 0;
-  left: 0;
-  border-top: 2px solid var(--color-fontaine-gold);
-  border-left: 2px solid var(--color-fontaine-gold);
-  border-top-left-radius: 4px;
-}
-
-.corner-gold-br {
-  bottom: 0;
-  right: 0;
-  border-bottom: 2px solid var(--color-fontaine-gold);
-  border-right: 2px solid var(--color-fontaine-gold);
-  border-bottom-right-radius: 4px;
-}
-
 /* ==========================================================================
-   MODE SWITCHER TABS & TIMER SELECTORS
-   ========================================================================== */
-
-.mode-tab-btn {
-  padding: 6px 13px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  background: transparent;
-  border: 1px solid transparent;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.mode-tab-btn:hover {
-  color: #e2e8f0;
-  background: rgba(26, 58, 107, 0.4);
-  border-color: rgba(56, 189, 248, 0.3);
-}
-
-.mode-tab-btn.active {
-  color: #050c18;
-  background: linear-gradient(135deg, #f5d061 0%, #eab308 100%);
-  border-color: #f5d061;
-  box-shadow: 0 0 16px rgba(245, 208, 97, 0.4);
-}
-
-.mode-tab-btn.active i {
-  color: #050c18 !important;
-}
-
-/* Timer Select Buttons */
-.timer-select-btn {
-  padding: 5px 10px;
-  border-radius: 10px;
-  font-size: 10.5px;
-  font-weight: 600;
-  background: rgba(9, 21, 40, 0.7);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  color: #cbd5e1;
-  transition: all 0.15s ease;
-  cursor: pointer;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.timer-select-btn:hover {
-  background: rgba(26, 58, 107, 0.6);
-  border-color: var(--color-fontaine-hydro);
-  color: #38bdf8;
-}
-
-.timer-select-btn.active {
-  background: rgba(6, 182, 212, 0.2);
-  border-color: #00d2ff;
-  color: #00d2ff;
-  box-shadow: 0 0 10px rgba(0, 210, 255, 0.35);
-}
-
-/* Sound Style Buttons */
-.sound-style-btn {
-  padding: 10px 6px;
-  border-radius: 12px;
-  background: rgba(9, 21, 40, 0.8);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  color: #cbd5e1;
-  text-align: center;
-  transition: all 0.15s ease;
-  cursor: pointer;
-}
-
-.sound-style-btn:hover {
-  border-color: var(--color-fontaine-hydro);
-  background: rgba(26, 58, 107, 0.5);
-}
-
-.sound-style-btn.active {
-  border-color: var(--color-fontaine-gold);
-  background: rgba(245, 208, 97, 0.15);
-  color: var(--color-fontaine-gold);
-  box-shadow: 0 0 12px rgba(245, 208, 97, 0.3);
-}
-
-/* ==========================================================================
-   DIGITAL CHESS CLOCKS
-   ========================================================================== */
-
-.chess-clock-box {
-  display: flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 8px;
-  background: rgba(5, 12, 24, 0.9);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  color: #94a3b8;
-  transition: all 0.2s ease;
-}
-
-.chess-clock-box.active-clock {
-  background: rgba(6, 182, 212, 0.18);
-  border-color: #00d2ff;
-  box-shadow: 0 0 14px rgba(0, 210, 255, 0.45);
-}
-
-.chess-clock-box.active-clock span {
-  color: #38bdf8;
-}
-
-.chess-clock-box.low-time {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: #f59e0b;
-  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
-}
-
-.chess-clock-box.low-time span {
-  color: #fbbf24;
-}
-
-.chess-clock-box.critical-time {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: #ef4444;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
-  animation: pulse-critical 0.9s infinite alternate ease-in-out;
-}
-
-.chess-clock-box.critical-time span {
-  color: #f87171;
-}
-
-@keyframes pulse-critical {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.05); }
-}
-
-/* ==========================================================================
-   CHESSBOARD.JS CUSTOM STYLING (FURINA PALETTE)
+   CHESSBOARD SQUARES & PIECE PHYSICS (PHYSICAL SLIDE ANIMATION)
    ========================================================================== */
 
 #chessBoard {
@@ -222,44 +35,51 @@ body {
   -webkit-user-select: none;
 }
 
-.board-theatrical-wrapper {
-  background: linear-gradient(145deg, #0f233e 0%, #071322 100%);
-  box-shadow: 0 0 35px rgba(0, 210, 255, 0.18), 0 20px 45px rgba(0, 0, 0, 0.8);
-}
-
-/* Light Squares: Frost Crystalline Ice */
+/* Light & Dark Squares */
 #chessBoard .white-1e1d7 {
   background-color: var(--square-light) !important;
-  color: var(--square-light-text) !important;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  color: #2b3948 !important;
 }
 
-/* Dark Squares: Fontaine Oceanic Navy */
 #chessBoard .black-3c85d {
   background-color: var(--square-dark) !important;
-  color: var(--square-dark-text) !important;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  color: #ebecd0 !important;
 }
 
-/* Active Drag Piece */
+/* Coordinates Styling (Chess.com corner style) */
+#chessBoard .notation-322f9 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* Physical Chess Piece Drag & Appearance */
 .piece-417db {
   cursor: grab;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
-  transition: transform 0.08s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+  will-change: top, left;
 }
 
+/* When dragging: physical lift & shadow */
 .piece-417db:active {
   cursor: grabbing;
-  transform: scale(1.12);
-  filter: drop-shadow(0 12px 20px rgba(0, 210, 255, 0.6));
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.65));
+  transform: scale(1.1);
+  z-index: 100 !important;
+  transition: transform 0.06s ease;
 }
 
-/* Square Highlighting Classes */
+/* Highlighting: Clean Chess.com / Lichess Style */
+
+/* 1. Selected Piece Square */
 .highlight-selected {
-  background-color: rgba(6, 182, 212, 0.45) !important;
-  box-shadow: inset 0 0 0 3px #00d2ff, inset 0 0 16px rgba(0, 210, 255, 0.8) !important;
+  background-color: rgba(0, 210, 255, 0.35) !important;
 }
 
+/* 2. Legal Destination Dot (Clean, minimal center circle) */
 .highlight-legal {
   position: relative;
 }
@@ -272,18 +92,20 @@ body {
   transform: translate(-50%, -50%);
   width: 28%;
   height: 28%;
-  background: #00d2ff;
+  background: rgba(0, 0, 0, 0.22);
   border-radius: 50%;
-  box-shadow: 0 0 10px #00d2ff, 0 0 18px rgba(0, 210, 255, 0.9);
   pointer-events: none;
   z-index: 10;
-  animation: legal-pulse 1.6s infinite ease-in-out;
 }
 
+/* On dark squares, make the dot subtly lighter */
+#chessBoard .black-3c85d.highlight-legal::after {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* 3. Legal Capture (Subtle perimeter ring) */
 .highlight-legal-capture {
   position: relative;
-  background-color: rgba(244, 63, 94, 0.22) !important;
-  box-shadow: inset 0 0 0 3px rgba(244, 63, 94, 0.85) !important;
 }
 
 .highlight-legal-capture::after {
@@ -292,169 +114,264 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 82%;
-  height: 82%;
-  border: 3px solid rgba(244, 63, 94, 0.9);
+  width: 86%;
+  height: 86%;
+  border: 4px solid rgba(0, 0, 0, 0.24);
   border-radius: 50%;
   pointer-events: none;
   z-index: 10;
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.7);
 }
 
+#chessBoard .black-3c85d.highlight-legal-capture::after {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* 4. Last Move Highlight (Soft golden-amber glow) */
 .highlight-last-move {
-  background-color: rgba(245, 208, 97, 0.35) !important;
-  box-shadow: inset 0 0 12px rgba(245, 208, 97, 0.6) !important;
+  background-color: rgba(245, 208, 97, 0.32) !important;
 }
 
+/* 5. King in Check (Soft crimson aura) */
 .highlight-check {
-  background-color: rgba(239, 68, 68, 0.55) !important;
-  box-shadow: inset 0 0 18px rgba(239, 68, 68, 0.95), 0 0 20px rgba(239, 68, 68, 0.8) !important;
-  animation: pulse-check 1.2s infinite alternate ease-in-out;
-}
-
-@keyframes pulse-check {
-  0% {
-    background-color: rgba(239, 68, 68, 0.4);
-    box-shadow: inset 0 0 12px rgba(239, 68, 68, 0.7);
-  }
-  100% {
-    background-color: rgba(239, 68, 68, 0.7);
-    box-shadow: inset 0 0 24px rgba(239, 68, 68, 1), 0 0 25px rgba(239, 68, 68, 0.85);
-  }
-}
-
-@keyframes legal-pulse {
-  0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.85;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.18);
-    opacity: 1;
-    box-shadow: 0 0 15px #00d2ff, 0 0 22px rgba(0, 210, 255, 1);
-  }
+  background: radial-gradient(ellipse at center, rgba(239, 68, 68, 0.85) 0%, rgba(220, 38, 38, 0.4) 75%) !important;
 }
 
 /* ==========================================================================
-   PROMOTION MODAL PIECE BUTTONS
+   CHESS.COM STYLE DIGITAL CLOCKS
    ========================================================================== */
 
-.promotion-piece-btn {
-  background: rgba(15, 30, 56, 0.9);
-  border: 1px solid var(--color-fontaine-border);
-  border-radius: 12px;
-  padding: 10px 4px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
+.chess-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background-color: var(--bg-clock);
+  border: 1px solid var(--border-subtle);
+  color: #94a3b8;
+  min-width: 74px;
+  transition: all 0.15s ease;
 }
 
-.promotion-piece-btn:hover {
-  background: rgba(26, 58, 107, 0.95);
-  border-color: var(--color-fontaine-gold);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 18px rgba(0, 210, 255, 0.35);
+.chess-clock.active-clock {
+  background-color: #1e293b;
+  border-color: var(--accent-hydro);
+  color: #f1f5f9;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.25);
 }
 
-.promotion-piece-btn:active {
-  transform: translateY(0);
+.chess-clock.low-time {
+  background-color: #291c10;
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.chess-clock.critical-time {
+  background-color: #311317;
+  border-color: #ef4444;
+  color: #f87171;
+  animation: pulse-clock 1s infinite alternate;
+}
+
+@keyframes pulse-clock {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.04); }
 }
 
 /* ==========================================================================
-   THEATRICAL EMOTE BUTTONS
+   MINIMALIST SIDEBAR TABS & BUTTONS
    ========================================================================== */
 
+.sidebar-tab-btn {
+  flex: 1;
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-tab-btn:hover {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-tab-btn.active {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-tab-content {
+  display: none;
+}
+
+.sidebar-tab-content.active {
+  display: flex;
+}
+
+/* Mode Switcher Buttons */
+.mode-tab-btn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  transition: all 0.12s ease;
+  text-align: center;
+}
+
+.mode-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.mode-tab-btn.active {
+  background: rgba(0, 210, 255, 0.15);
+  border-color: rgba(0, 210, 255, 0.4);
+  color: #38bdf8;
+}
+
+/* Timer Preset Buttons */
+.timer-select-btn {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  color: #94a3b8;
+  transition: all 0.12s ease;
+}
+
+.timer-select-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.timer-select-btn.active {
+  background: rgba(245, 208, 97, 0.18);
+  border-color: rgba(245, 208, 97, 0.5);
+  color: #f5d061;
+}
+
+/* Sound Theme Buttons */
+.sound-style-btn {
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  color: #94a3b8;
+  transition: all 0.12s ease;
+  text-align: center;
+}
+
+.sound-style-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.sound-style-btn.active {
+  background: rgba(0, 210, 255, 0.15);
+  border-color: rgba(0, 210, 255, 0.4);
+  color: #38bdf8;
+}
+
+/* Bottom Action Icon Buttons (Chess.com Flat Style) */
+.action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-weight: 600;
+  transition: all 0.12s ease;
+}
+
+.action-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+/* Theatrical Emote Buttons */
 .chat-emote-btn {
   white-space: nowrap;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 9999px;
-  background: rgba(13, 30, 56, 0.85);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: #bae6fd;
-  font-size: 10.5px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 10px;
+  transition: all 0.12s ease;
 }
 
 .chat-emote-btn:hover {
-  background: rgba(35, 77, 141, 0.9);
-  border-color: var(--color-fontaine-gold);
-  color: var(--color-fontaine-gold);
-  transform: translateY(-1px);
+  background: rgba(0, 210, 255, 0.15);
+  border-color: var(--accent-hydro);
+  color: #38bdf8;
 }
 
-/* ==========================================================================
-   CUSTOM SCROLLBAR
-   ========================================================================== */
+/* Promotion Modal Pieces */
+.promotion-piece-btn {
+  padding: 6px 2px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.12s ease;
+}
 
+.promotion-piece-btn:hover {
+  background: rgba(0, 210, 255, 0.15);
+  border-color: var(--accent-hydro);
+  transform: translateY(-2px);
+}
+
+/* Custom Minimal Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(9, 21, 40, 0.6);
-  border-radius: 4px;
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.35);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 210, 255, 0.65);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* ==========================================================================
-   KEYFRAME ANIMATIONS
-   ========================================================================== */
-
+/* Keyframe animations */
 @keyframes scaleUp {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-scale-up {
-  animation: scaleUp 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.hydro-particles {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle 2px at 20% 30%, rgba(56, 189, 248, 0.3), transparent),
-                    radial-gradient(circle 2px at 80% 40%, rgba(245, 208, 97, 0.2), transparent),
-                    radial-gradient(circle 3px at 45% 75%, rgba(0, 210, 255, 0.25), transparent);
-  background-size: 300px 300px;
-  animation: float-particles 30s linear infinite;
-  opacity: 0.6;
-}
-
-@keyframes float-particles {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-300px); }
-}
-
+/* Chat bubble styling */
 .chat-bubble-self {
-  background: linear-gradient(135deg, rgba(6, 95, 140, 0.7) 0%, rgba(14, 116, 144, 0.5) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 12px 12px 2px 12px;
+  background: rgba(0, 210, 255, 0.12);
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  border-radius: 8px 8px 2px 8px;
 }
 
 .chat-bubble-opponent {
-  background: rgba(19, 42, 78, 0.7);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  border-radius: 12px 12px 12px 2px;
-}
-
-.chat-bubble-system {
-  background: rgba(9, 21, 40, 0.7);
-  border: 1px dashed rgba(245, 208, 97, 0.4);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px 8px 8px 2px;
 }
