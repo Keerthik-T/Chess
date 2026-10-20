@@ -69,7 +69,7 @@
           <i class="fa-solid fa-water"></i>
         </span>
         <span class="font-opera text-sm font-bold tracking-wider text-slate-100 group-hover:text-hydro-400 transition">
-          Home
+          OPÉRA ÉPICLESSE
         </span>
       </a>
 
@@ -88,7 +88,7 @@
         <span class="hidden md:inline text-[11px]" id="bgMusicLabel">Waltz</span>
       </button>
 
-      <!-- Sound Settings Toggle (Directly opens Settings Tab) -->
+      <!-- Settings Toggle -->
       <button id="soundSettingsBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-gold-400 text-xs font-medium transition flex items-center gap-1.5" title="Settings & Customization">
         <i id="soundIcon" class="fa-solid fa-gear text-xs"></i>
         <span class="hidden md:inline text-[11px]">Settings</span>
@@ -242,47 +242,63 @@
           </div>
 
           <!-- Mode-Specific Action Panels -->
-          <!-- 1. Online Panel -->
-          <div id="panel-online" class="space-y-2.5">
-            <div id="hostInitialActions">
-              <button id="createGameBtn" class="w-full py-2.5 px-3 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-xs tracking-wide transition flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-bolt"></i>
-                <span>Create Invite Link (Host)</span>
-              </button>
-            </div>
+          <!-- 1. Online Panel (Directly Visible Link & Connect) -->
+          <div id="panel-online" class="space-y-3">
+            
+            <!-- Host Link Box (Instantly ready!) -->
+            <div id="hostLinkBox" class="space-y-1.5">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <i class="fa-solid fa-link text-hydro-400"></i> Your Game Invite Link
+                </span>
+                <span id="hostPeerBadge" class="text-[10px] font-mono text-slate-400 bg-surface-950 px-1.5 py-0.5 rounded border border-white/5">
+                  Connecting...
+                </span>
+              </div>
 
-            <!-- Host Link Box -->
-            <div id="hostLinkBox" class="hidden space-y-2">
               <div class="flex items-center gap-1.5">
-                <input id="shareLinkInput" type="text" readonly value="Generating link..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-hydro-300 font-mono tracking-tight focus:outline-none">
-                <button id="copyLinkBtn" class="shrink-0 px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-surface-950 font-bold text-xs transition" title="Copy Link">
+                <input id="shareLinkInput" type="text" readonly value="Generating invite link..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-hydro-300 font-mono tracking-tight focus:outline-none">
+                <button id="copyLinkBtn" class="shrink-0 px-3.5 py-2 rounded-lg bg-gold-500 hover:bg-gold-400 text-surface-950 font-bold text-xs transition flex items-center gap-1" title="Copy Link">
                   <i id="copyIcon" class="fa-solid fa-copy"></i>
-                  <span id="copyBtnText" class="hidden sm:inline ml-1">Copy</span>
+                  <span id="copyBtnText">Copy</span>
                 </button>
-                <button id="showQrBtn" class="shrink-0 p-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs transition" title="Show QR Code">
+                <button id="showQrBtn" class="shrink-0 p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs transition" title="Show QR Code">
                   <i class="fa-solid fa-qrcode"></i>
                 </button>
+                <button id="createGameBtn" class="shrink-0 p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs transition" title="Regenerate Link">
+                  <i class="fa-solid fa-rotate"></i>
+                </button>
               </div>
-              <p class="text-[11px] text-amber-300/80 flex items-center gap-1 animate-pulse">
-                <i class="fa-solid fa-spinner fa-spin"></i> Waiting for opponent to join...
+
+              <p id="hostStatusMsg" class="text-[11px] text-amber-300/80 flex items-center gap-1.5 pt-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                <span id="hostStatusMsgText">Waiting for opponent to open link...</span>
               </p>
             </div>
 
             <!-- Join manual input -->
-            <div id="joinDefaultContent" class="pt-2 border-t border-white/[0.06] space-y-1.5">
-              <label class="text-[11px] text-slate-400">Or join an existing game:</label>
+            <div id="joinDefaultContent" class="pt-2.5 border-t border-white/[0.06] space-y-1.5">
+              <label class="text-[11px] text-slate-400 font-semibold block">Or connect to a friend's duel:</label>
               <div class="flex items-center gap-1.5">
-                <input id="manualJoinInput" type="text" placeholder="Paste link or Peer ID..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono tracking-tight focus:outline-none focus:border-hydro-400">
-                <button id="manualJoinBtn" class="shrink-0 px-3 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 font-bold text-xs transition">
-                  Join
+                <input id="manualJoinInput" type="text" placeholder="Paste invite link or Peer ID..." class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-slate-200 font-mono tracking-tight focus:outline-none focus:border-hydro-400">
+                <button id="manualJoinBtn" class="shrink-0 px-3.5 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-100 font-bold text-xs transition">
+                  Connect
                 </button>
               </div>
             </div>
 
-            <div id="autoJoinState" class="hidden p-2 rounded-lg bg-hydro-500/10 border border-hydro-500/30 text-xs space-y-1">
-              <div class="font-bold text-hydro-300">Connecting to Host...</div>
+            <!-- Auto-Join status indicator when ?join= is in URL -->
+            <div id="autoJoinState" class="hidden p-2.5 rounded-lg bg-hydro-500/10 border border-hydro-500/30 text-xs space-y-1.5">
+              <div class="flex items-center gap-2 text-hydro-300 font-bold">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Connecting to Host Stage...</span>
+              </div>
               <div id="autoJoinHostText" class="text-[10px] text-slate-400 font-mono"></div>
-              <button id="cancelJoinBtn" class="text-[10px] text-rose-400 hover:underline">Cancel</button>
+              <div class="flex items-center gap-2 pt-1">
+                <button id="cancelJoinBtn" class="text-[10px] text-rose-400 hover:underline">
+                  Host your own game instead
+                </button>
+              </div>
             </div>
           </div>
 
@@ -688,7 +704,8 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- PeerJS from Cloudflare CDNJS for ultra-fast, reliable global routing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 
   <!-- Core Application Logic -->
   <script src="app.js"></script>

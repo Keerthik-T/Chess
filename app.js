@@ -9,8 +9,24 @@
   'use strict';
 
   // ==========================================================================
-  // 1. STATE MANAGEMENT
+  // 1. CONFIGURATION & STATE
   // ==========================================================================
+
+  // Robust STUN servers for WebRTC connection across firewalls and NATs
+  const PEER_CONFIG = {
+    debug: 1,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
+      ],
+      iceCandidatePoolSize: 10
+    }
+  };
 
   let game = null;           // chess.js instance
   let board = null;          // chessboard.js instance
@@ -18,6 +34,7 @@
   let connection = null;     // PeerJS DataConnection
   let broadcastChan = null;  // BroadcastChannel for offline dual window
   let bluetoothDevice = null;// Web Bluetooth peripheral device
+  let heartbeatInterval = null;
 
   let myPeerId = null;
   let targetPeerId = null;
@@ -107,7 +124,7 @@
     ]
   };
 
-  // Board Themes Definitions
+  // Board Theme Palettes
   const BOARD_THEMES = {
     fontaine: { light: '#ebecd0', dark: '#2c4d6f', name: 'Fontaine Slate' },
     green: { light: '#ebecd0', dark: '#739552', name: 'Classic Green' },
@@ -120,7 +137,6 @@
   // ==========================================================================
 
   const dom = {
-    // Top Bar
     connectionPill: document.getElementById('connectionPill'),
     connectionPillText: document.getElementById('connectionPillText'),
     bgMusicToggleBtn: document.getElementById('bgMusicToggleBtn'),
@@ -130,7 +146,6 @@
     helpModalBtn: document.getElementById('helpModalBtn'),
     navNewGameBtn: document.getElementById('navNewGameBtn'),
 
-    // Board & Players
     chessBoard: document.getElementById('chessBoard'),
     floatingCheckBanner: document.getElementById('floatingCheckBanner'),
     floatingCheckText: document.getElementById('floatingCheckText'),
@@ -153,29 +168,28 @@
     selfClockTime: document.getElementById('selfClockTime'),
     selfClockWrapper: document.getElementById('selfClockWrapper'),
 
-    // Sidebar Tabs
     sidebarTabs: document.querySelectorAll('.sidebar-tab-btn'),
     sidebarTabContents: document.querySelectorAll('.sidebar-tab-content'),
 
-    // Mode Switcher Buttons
     modeTabs: document.querySelectorAll('.mode-tab-btn'),
     panelOnline: document.getElementById('panel-online'),
     panelOfflineLocal: document.getElementById('panel-offline_local'),
     panelBluetooth: document.getElementById('panel-bluetooth'),
     panelOfflineTab: document.getElementById('panel-offline_tab'),
 
-    // Time Control Buttons
     timerButtons: document.querySelectorAll('.timer-select-btn'),
 
-    // Mode Panels Controls
     createGameBtn: document.getElementById('createGameBtn'),
-    hostInitialActions: document.getElementById('hostInitialActions'),
     hostLinkBox: document.getElementById('hostLinkBox'),
+    hostPeerBadge: document.getElementById('hostPeerBadge'),
     shareLinkInput: document.getElementById('shareLinkInput'),
     copyLinkBtn: document.getElementById('copyLinkBtn'),
     copyIcon: document.getElementById('copyIcon'),
     copyBtnText: document.getElementById('copyBtnText'),
     showQrBtn: document.getElementById('showQrBtn'),
+    hostStatusMsg: document.getElementById('hostStatusMsg'),
+    hostStatusMsgText: document.getElementById('hostStatusMsgText'),
+
     joinDefaultContent: document.getElementById('joinDefaultContent'),
     manualJoinInput: document.getElementById('manualJoinInput'),
     manualJoinBtn: document.getElementById('manualJoinBtn'),
@@ -192,23 +206,19 @@
     startBroadcastWhiteBtn: document.getElementById('startBroadcastWhiteBtn'),
     startBroadcastBlackBtn: document.getElementById('startBroadcastBlackBtn'),
 
-    // Status / Quote in Sidebar
     verdictStatusTitle: document.getElementById('verdictStatusTitle'),
     verdictStatusDesc: document.getElementById('verdictStatusDesc'),
     furinaQuoteText: document.getElementById('furinaQuoteText'),
     moveCountBadge: document.getElementById('moveCountBadge'),
 
-    // Moves Tab
     moveLogContainer: document.getElementById('moveLogContainer'),
     emptyMovePlaceholder: document.getElementById('emptyMovePlaceholder'),
     moveLogList: document.getElementById('moveLogList'),
 
-    // Chat Tab
     chatMessages: document.getElementById('chatMessages'),
     chatForm: document.getElementById('chatForm'),
     chatInput: document.getElementById('chatInput'),
 
-    // Settings Tab Controls
     activeThemeLabel: document.getElementById('activeThemeLabel'),
     boardThemeSwatches: document.querySelectorAll('.board-theme-swatch'),
     animSpeedButtons: document.querySelectorAll('.anim-speed-btn'),
@@ -225,7 +235,6 @@
     settingsCopyPeerIdBtn: document.getElementById('settingsCopyPeerIdBtn'),
     resetSettingsBtn: document.getElementById('resetSettingsBtn'),
 
-    // Bottom Action Bar
     takebackBtn: document.getElementById('takebackBtn'),
     takebackBtnText: document.getElementById('takebackBtnText'),
     offerDrawBtn: document.getElementById('offerDrawBtn'),
@@ -233,7 +242,6 @@
     flipBoardBtn: document.getElementById('flipBoardBtn'),
     fenCopyBtn: document.getElementById('fenCopyBtn'),
 
-    // Modals
     promotionModal: document.getElementById('promotionModal'),
     promoImgQ: document.getElementById('promoImgQ'),
     promoImgR: document.getElementById('promoImgR'),
@@ -264,7 +272,897 @@
   };
 
   // ==========================================================================
-  // 3. WEB AUDIO SYNTHESIZER & WALTZ MUSIC
+  // 3. UTILITY FUNCTIONS
+  // ==========================================================================
+
+  // Extracts clean Peer ID from raw text, full URL, or query string
+  function extractPeerId(input) {
+    if (!input) return '';
+    let str = input.trim();
+    try {
+      if (str.includes('?join=')) {
+        const url = new URL(str, window.location.origin);
+        return url.searchParams.get('join') || str;
+      }
+    } catch (e) {
+      const match = str.match(/[?&]join=([^&#\s]+)/);
+      if (match) return decodeURIComponent(match[1]);
+    }
+    return str;
+  }
+
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `p-2.5 px-3 rounded-lg shadow-xl border backdrop-blur-md flex items-center gap-2 text-xs font-medium tracking-wide animate-scale-up pointer-events-auto ${
+      type === 'success'
+        ? 'bg-surface-900 text-hydro-300 border-hydro-500/40'
+        : type === 'warning'
+        ? 'bg-surface-900 text-amber-300 border-amber-500/40'
+        : type === 'error'
+        ? 'bg-surface-900 text-rose-300 border-rose-500/40'
+        : 'bg-surface-900 text-slate-200 border-white/10'
+    }`;
+
+    const icon =
+      type === 'success' ? 'fa-circle-check text-hydro-400' :
+      type === 'warning' ? 'fa-triangle-exclamation text-amber-400' :
+      type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-slate-400';
+
+    toast.innerHTML = `<i class="fa-solid ${icon} text-xs shrink-0"></i><span>${message}</span>`;
+    dom.toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(() => toast.remove(), 250);
+    }, 3200);
+  }
+
+  function setFurinaQuote(category) {
+    const quotes = FURINA_QUOTES[category] || FURINA_QUOTES.welcome;
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    dom.furinaQuoteText.textContent = randomQuote;
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag));
+  }
+
+  // ==========================================================================
+  // 4. WEBRTC ENGINE (PEERJS WITH STUN & HEARTBEAT)
+  // ==========================================================================
+
+  function sendWebRTC(data) {
+    if (connection && connection.open) {
+      try {
+        connection.send(data);
+      } catch (e) {
+        console.error('WebRTC send error:', e);
+      }
+    }
+  }
+
+  function startHeartbeat() {
+    stopHeartbeat();
+    heartbeatInterval = setInterval(() => {
+      if (connection && connection.open) {
+        sendWebRTC({ type: 'ping' });
+      }
+    }, 4000);
+  }
+
+  function stopHeartbeat() {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+  }
+
+  function setupConnection(conn) {
+    if (!conn) return;
+    connection = conn;
+
+    let hasOpened = false;
+    function onOpen() {
+      if (hasOpened) return;
+      hasOpened = true;
+
+      console.log('WebRTC connection ready with peer:', conn.peer);
+      isConnected = true;
+      isGameOver = false;
+
+      updateConnectionPill('connected', 'Live (P2P)');
+      resetClocks();
+
+      // Automatically switch to Moves tab
+      switchSidebarTab('tab-moves');
+
+      // Update status text
+      if (dom.hostStatusMsgText) {
+        dom.hostStatusMsgText.textContent = 'Opponent connected! Duel in progress.';
+      }
+
+      // Host initiates synchronization
+      if (isHost) {
+        sendWebRTC({
+          type: 'init',
+          fen: game.fen(),
+          hostColor: 'w',
+          timePreset: timePreset,
+          whiteTime: whiteTime,
+          blackTime: blackTime
+        });
+      }
+
+      playSound('victory');
+      setFurinaQuote('gameStart');
+      showToast(
+        isHost ? 'Challenger connected! White moves first.' : 'Connected to host! White moves first.',
+        'success'
+      );
+
+      appendChatMessage('System', 'P2P WebRTC data connection established.', 'system');
+      updateUI();
+      startHeartbeat();
+    }
+
+    // CRITICAL: Handle if connection is already open OR await event
+    if (conn.open) {
+      onOpen();
+    } else {
+      conn.on('open', onOpen);
+    }
+
+    conn.on('data', (data) => {
+      if (data && data.type === 'ping') {
+        sendWebRTC({ type: 'pong' });
+        return;
+      }
+      if (data && data.type === 'pong') {
+        return; // Heartbeat acknowledged
+      }
+      handleIncomingData(data);
+    });
+
+    conn.on('close', () => {
+      console.log('Connection closed with peer:', conn.peer);
+      isConnected = false;
+      stopClock();
+      stopHeartbeat();
+      updateConnectionPill('disconnected', 'Disconnected');
+      playSound('defeat');
+      setFurinaQuote('disconnect');
+      showToast('Opponent disconnected.', 'error');
+      appendChatMessage('System', 'Opponent disconnected.', 'system');
+      updateUI();
+    });
+
+    conn.on('error', (err) => {
+      console.error('DataConnection error:', err);
+      showToast(`Connection error: ${err.message || err}`, 'error');
+    });
+  }
+
+  function initHost(regenerate = false) {
+    isHost = true;
+    myColor = 'w';
+    opponentColor = 'b';
+    board.orientation('white');
+
+    if (peer && !peer.destroyed && !regenerate) {
+      return;
+    }
+
+    updateConnectionPill('connecting', 'Generating Signal...');
+
+    if (peer && !peer.destroyed) {
+      peer.destroy();
+    }
+
+    peer = new Peer(PEER_CONFIG);
+
+    peer.on('open', (id) => {
+      myPeerId = id;
+      console.log('Host PeerJS ready with ID:', id);
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(id)}`;
+      dom.shareLinkInput.value = shareUrl;
+      dom.settingsPeerIdInput.value = id;
+
+      if (dom.hostPeerBadge) {
+        dom.hostPeerBadge.textContent = `ID: ${id.substring(0, 8)}...`;
+      }
+
+      dom.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
+
+      updateConnectionPill('waiting', 'Ready for Opponent');
+      setFurinaQuote('welcome');
+
+      if (dom.hostStatusMsgText) {
+        dom.hostStatusMsgText.textContent = 'Waiting for opponent to open link...';
+      }
+    });
+
+    peer.on('connection', (incomingConn) => {
+      console.log('Incoming connection request from peer:', incomingConn.peer);
+      if (connection && connection.open) {
+        incomingConn.close();
+        return;
+      }
+      setupConnection(incomingConn);
+    });
+
+    peer.on('error', (err) => {
+      console.error('Host Peer Error:', err);
+      updateConnectionPill('disconnected', 'Signal Error');
+      showToast(`Peer signal error: ${err.type || err.message}`, 'error');
+    });
+  }
+
+  function initJoiner(hostPeerId) {
+    const cleanHostId = extractPeerId(hostPeerId);
+    if (!cleanHostId) {
+      showToast('Invalid host connection ID.', 'error');
+      return;
+    }
+
+    isHost = false;
+    myColor = 'b';
+    opponentColor = 'w';
+    targetPeerId = cleanHostId;
+
+    board.orientation('black');
+
+    dom.selfName.textContent = 'You (Black)';
+    dom.selfColorBadge.textContent = 'Black';
+    dom.selfAvatar.innerHTML = '<i class="fa-solid fa-chess-knight"></i>';
+
+    dom.opponentName.textContent = 'Host (White)';
+    dom.opponentColorBadge.textContent = 'White';
+    dom.opponentAvatar.innerHTML = '<i class="fa-solid fa-crown text-gold-400"></i>';
+
+    dom.joinDefaultContent.classList.add('hidden');
+    dom.autoJoinState.classList.remove('hidden');
+    dom.autoJoinHostText.textContent = `Host ID: ${cleanHostId.substring(0, 16)}...`;
+
+    updateConnectionPill('connecting', 'Connecting...');
+    showToast(`Connecting to Host Stage...`, 'info');
+
+    if (peer && !peer.destroyed) {
+      peer.destroy();
+    }
+
+    peer = new Peer(PEER_CONFIG);
+
+    peer.on('open', (myId) => {
+      myPeerId = myId;
+      dom.settingsPeerIdInput.value = myId;
+      console.log('Joiner PeerJS ready with ID:', myId, 'Connecting to host:', cleanHostId);
+
+      const conn = peer.connect(cleanHostId, {
+        reliable: true,
+        serialization: 'json'
+      });
+      setupConnection(conn);
+    });
+
+    peer.on('error', (err) => {
+      console.error('Joiner Peer Error:', err);
+      updateConnectionPill('disconnected', 'Connection Failed');
+      if (err.type === 'peer-unavailable') {
+        showToast('Host not found. The host game may have closed or the link expired.', 'error');
+      } else {
+        showToast(`Connection error: ${err.type || err.message}`, 'error');
+      }
+    });
+  }
+
+  function updateConnectionPill(status, text) {
+    dom.connectionPillText.textContent = text;
+    const dot = dom.connectionPill.querySelector('span:first-child');
+    if (dot) {
+      dot.className =
+        'w-1.5 h-1.5 rounded-full ' +
+        (status === 'connected' ? 'bg-emerald-400' :
+         status === 'waiting' ? 'bg-hydro-400 animate-ping' :
+         status === 'connecting' ? 'bg-amber-400 animate-ping' : 'bg-rose-400');
+    }
+  }
+
+  // ==========================================================================
+  // 5. INCOMING DATA HANDLING & CHESS PLAY
+  // ==========================================================================
+
+  function handleIncomingData(data) {
+    if (!data || typeof data !== 'object') return;
+
+    switch (data.type) {
+      case 'init':
+        if (data.timePreset) {
+          timePreset = data.timePreset;
+          whiteTime = data.whiteTime || timePreset.base;
+          blackTime = data.blackTime || timePreset.base;
+          updateClockDisplay();
+        }
+        if (data.fen && data.fen !== game.fen()) {
+          game.load(data.fen);
+          board.position(data.fen, true);
+        }
+        break;
+
+      case 'move':
+        if (data.whiteTime !== undefined && data.blackTime !== undefined) {
+          whiteTime = data.whiteTime;
+          blackTime = data.blackTime;
+        }
+
+        const move = game.move({
+          from: data.from,
+          to: data.to,
+          promotion: data.promotion || 'q'
+        });
+
+        if (move) {
+          // Physical piece glide across squares!
+          board.position(game.fen(), true);
+          onMoveExecuted(move);
+        } else if (data.fen) {
+          game.load(data.fen);
+          board.position(data.fen, true);
+          updateUI();
+          checkGameStatus();
+        }
+        break;
+
+      case 'takeback_request':
+        playSound('droplet');
+        dom.takebackModal.classList.remove('hidden');
+        dom.takebackModal.classList.add('flex');
+        break;
+
+      case 'takeback_response':
+        if (data.accepted) {
+          executeUndo();
+          showToast('Takeback granted! Move rewound.', 'success');
+        } else {
+          showToast('Opponent declined takeback.', 'warning');
+        }
+        break;
+
+      case 'chat':
+        appendChatMessage(data.sender, data.text, 'opponent');
+        playSound('droplet');
+        break;
+
+      case 'draw_offer':
+        playSound('check');
+        const acceptDraw = confirm('Opponent offers a draw. Accept?');
+        const drawResp = { type: 'draw_response', accepted: acceptDraw };
+        if (currentMode === 'online') sendWebRTC(drawResp);
+        if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(drawResp);
+
+        if (acceptDraw) {
+          isGameOver = true;
+          stopClock();
+          triggerGameOverModal('Draw Agreed', 'Both players agreed to a draw.', FURINA_QUOTES.draw[0], null);
+        }
+        break;
+
+      case 'draw_response':
+        if (data.accepted) {
+          isGameOver = true;
+          stopClock();
+          triggerGameOverModal('Draw Agreed', 'Opponent accepted the draw.', FURINA_QUOTES.draw[0], null);
+        } else {
+          showToast('Draw offer declined.', 'warning');
+        }
+        break;
+
+      case 'resign':
+        isGameOver = true;
+        stopClock();
+        playSound('victory');
+        triggerGameOverModal('Victory by Resignation!', 'Opponent resigned.', FURINA_QUOTES.checkmateWhite[0], true);
+        break;
+
+      case 'rematch_offer':
+        playSound('check');
+        const acceptRematch = confirm('Opponent requests a rematch. Accept?');
+        const remResp = { type: 'rematch_response', accepted: acceptRematch };
+        if (currentMode === 'online') sendWebRTC(remResp);
+        if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(remResp);
+
+        if (acceptRematch) executeRematch();
+        break;
+
+      case 'rematch_response':
+        if (data.accepted) {
+          executeRematch();
+          showToast('Rematch accepted!', 'success');
+        } else {
+          showToast('Rematch declined.', 'warning');
+        }
+        break;
+    }
+  }
+
+  // ==========================================================================
+  // 6. CHESS ENGINE & BOARD
+  // ==========================================================================
+
+  function initChess() {
+    game = new Chess();
+
+    const config = {
+      draggable: true,
+      position: 'start',
+      orientation: myColor === 'w' ? 'white' : 'black',
+      pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+      moveSpeed: animSpeedDuration,
+      snapbackSpeed: 150,
+      snapSpeed: 70,
+      onDragStart: handleDragStart,
+      onDrop: handleDrop,
+      onSnapEnd: handleSnapEnd
+    };
+
+    board = Chessboard('chessBoard', config);
+
+    window.addEventListener('resize', () => {
+      if (board) {
+        board.resize();
+        reapplyLastMoveHighlights();
+      }
+    });
+
+    updateUI();
+  }
+
+  function handleDragStart(source, piece, position, orientation) {
+    if (game.game_over() || isGameOver) return false;
+
+    if (currentMode === 'offline_local') {
+      const turn = game.turn();
+      if ((turn === 'w' && piece.search(/^b/) !== -1) || (turn === 'b' && piece.search(/^w/) !== -1)) {
+        return false;
+      }
+      highlightLegalMoves(source);
+      return true;
+    }
+
+    if (!isConnected) {
+      showToast('Connect with opponent to start playing!', 'warning');
+      return false;
+    }
+
+    if (game.turn() !== myColor) return false;
+
+    if (
+      (myColor === 'w' && piece.search(/^b/) !== -1) ||
+      (myColor === 'b' && piece.search(/^w/) !== -1)
+    ) {
+      return false;
+    }
+
+    highlightLegalMoves(source);
+    return true;
+  }
+
+  function handleDrop(source, target) {
+    removeSquareHighlights();
+    if (source === target) return;
+
+    const isPromo = isPromotionMove(source, target);
+    if (isPromo) {
+      const testMove = game.move({ from: source, to: target, promotion: 'q' });
+      if (testMove === null) return 'snapback';
+      game.undo();
+      pendingPromotion = { source, target };
+      openPromotionModal();
+      return 'snapback';
+    }
+
+    const move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+
+    onMoveExecuted(move);
+    broadcastMove(move);
+  }
+
+  function handleSnapEnd() {
+    board.position(game.fen(), false);
+    reapplyLastMoveHighlights();
+
+    if (currentMode === 'offline_local' && autoFlipEnabled && !isGameOver) {
+      const nextTurn = game.turn();
+      board.orientation(nextTurn === 'w' ? 'white' : 'black');
+    }
+  }
+
+  function isPromotionMove(source, target) {
+    const piece = game.get(source);
+    if (!piece || piece.type !== 'p') return false;
+    if (piece.color !== game.turn()) return false;
+    const targetRank = target.charAt(1);
+    return (
+      (piece.color === 'w' && targetRank === '8') ||
+      (piece.color === 'b' && targetRank === '1')
+    );
+  }
+
+  function onMoveExecuted(move) {
+    lastMoveSquares.from = move.from;
+    lastMoveSquares.to = move.to;
+
+    if (move.captured) {
+      playSound('capture');
+    } else {
+      playSound('move');
+    }
+
+    if (!clockRunning && timePreset.base > 0) {
+      startClock();
+    } else {
+      switchClockTurn();
+    }
+
+    updateUI();
+    reapplyLastMoveHighlights();
+    checkGameStatus();
+  }
+
+  function broadcastMove(move) {
+    const packet = {
+      type: 'move',
+      from: move.from,
+      to: move.to,
+      promotion: move.promotion,
+      san: move.san,
+      fen: game.fen(),
+      whiteTime: whiteTime,
+      blackTime: blackTime
+    };
+
+    if (currentMode === 'online') {
+      sendWebRTC(packet);
+    } else if (currentMode === 'offline_tab' && broadcastChan) {
+      broadcastChan.postMessage(packet);
+    }
+  }
+
+  function removeSquareHighlights() {
+    $('#chessBoard .square-55d63').removeClass(
+      'highlight-legal highlight-legal-capture highlight-selected'
+    );
+  }
+
+  function highlightLegalMoves(source) {
+    removeSquareHighlights();
+    $('#chessBoard .square-' + source).addClass('highlight-selected');
+
+    if (!showLegalDots) return;
+
+    const moves = game.moves({ square: source, verbose: true });
+    if (moves.length === 0) return;
+
+    for (let i = 0; i < moves.length; i++) {
+      const destSquare = moves[i].to;
+      const $square = $('#chessBoard .square-' + destSquare);
+      if (moves[i].captured) {
+        $square.addClass('highlight-legal-capture');
+      } else {
+        $square.addClass('highlight-legal');
+      }
+    }
+  }
+
+  function reapplyLastMoveHighlights() {
+    $('#chessBoard .square-55d63').removeClass('highlight-last-move highlight-check');
+
+    if (lastMoveSquares.from && lastMoveSquares.to) {
+      $('#chessBoard .square-' + lastMoveSquares.from).addClass('highlight-last-move');
+      $('#chessBoard .square-' + lastMoveSquares.to).addClass('highlight-last-move');
+    }
+
+    if (game.in_check()) {
+      const kingSquare = findKingSquare(game.turn());
+      if (kingSquare) {
+        $('#chessBoard .square-' + kingSquare).addClass('highlight-check');
+      }
+    }
+  }
+
+  function findKingSquare(color) {
+    const b = game.board();
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = b[r][c];
+        if (piece && piece.type === 'k' && piece.color === color) {
+          return files[c] + (8 - r);
+        }
+      }
+    }
+    return null;
+  }
+
+  function openPromotionModal() {
+    const promoColor = game.turn();
+    const prefix = promoColor === 'w' ? 'w' : 'b';
+    dom.promoImgQ.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}Q.png`;
+    dom.promoImgR.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}R.png`;
+    dom.promoImgB.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}B.png`;
+    dom.promoImgN.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}N.png`;
+
+    dom.promotionModal.classList.remove('hidden');
+    dom.promotionModal.classList.add('flex');
+    playSound('droplet');
+  }
+
+  function closePromotionModal() {
+    dom.promotionModal.classList.add('hidden');
+    dom.promotionModal.classList.remove('flex');
+  }
+
+  function selectPromotionPiece(pieceType) {
+    closePromotionModal();
+    if (!pendingPromotion) return;
+
+    const { source, target } = pendingPromotion;
+    pendingPromotion = null;
+
+    const move = game.move({ from: source, to: target, promotion: pieceType });
+    if (move) {
+      board.position(game.fen(), true);
+      onMoveExecuted(move);
+      broadcastMove(move);
+    }
+  }
+
+  function handleTakebackRequest() {
+    if (game.history().length === 0) {
+      showToast('No moves made yet.', 'warning');
+      return;
+    }
+
+    if (currentMode === 'offline_local') {
+      executeUndo();
+      showToast('Move retracted.', 'info');
+      return;
+    }
+
+    if (!isConnected) {
+      showToast('Connect with opponent to request takeback.', 'warning');
+      return;
+    }
+
+    const packet = { type: 'takeback_request' };
+    if (currentMode === 'online') sendWebRTC(packet);
+    if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
+
+    showToast('Takeback request sent to opponent...', 'info');
+  }
+
+  function executeUndo() {
+    const undone = game.undo();
+    if (!undone) return;
+
+    board.position(game.fen(), true);
+
+    const hist = game.history({ verbose: true });
+    if (hist.length > 0) {
+      const last = hist[hist.length - 1];
+      lastMoveSquares.from = last.from;
+      lastMoveSquares.to = last.to;
+    } else {
+      lastMoveSquares = { from: null, to: null };
+    }
+
+    updateUI();
+    reapplyLastMoveHighlights();
+    playSound('droplet');
+  }
+
+  function checkGameStatus() {
+    const isMyTurn = game.turn() === myColor;
+
+    if (game.in_check() && !game.in_checkmate()) {
+      playSound('check');
+      dom.floatingCheckBanner.classList.remove('hidden');
+      dom.floatingCheckBanner.classList.add('flex');
+      dom.floatingCheckText.textContent = isMyTurn ? 'Check! King imperiled!' : 'Opponent in Check!';
+      setFurinaQuote('check');
+    } else {
+      dom.floatingCheckBanner.classList.add('hidden');
+      dom.floatingCheckBanner.classList.remove('flex');
+    }
+
+    if (game.in_checkmate()) {
+      isGameOver = true;
+      stopClock();
+      const winnerColor = game.turn() === 'w' ? 'b' : 'w';
+      const isWinner = winnerColor === myColor;
+
+      if (currentMode === 'offline_local') {
+        playSound('victory');
+        triggerGameOverModal('Checkmate!', `${winnerColor === 'w' ? 'White' : 'Black'} wins!`, FURINA_QUOTES.checkmateWhite[0], null);
+      } else if (isWinner) {
+        playSound('victory');
+        triggerGameOverModal('Victory by Checkmate!', 'Triumph! You have defeated the opposing sovereign.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[0] : FURINA_QUOTES.checkmateBlack[0], true);
+      } else {
+        playSound('defeat');
+        triggerGameOverModal('Defeat by Checkmate', 'The curtains fall upon your king.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[1] : FURINA_QUOTES.checkmateBlack[1], false);
+      }
+      return;
+    }
+
+    if (game.in_stalemate()) {
+      isGameOver = true;
+      stopClock();
+      playSound('defeat');
+      triggerGameOverModal('Stalemate (Draw)', 'No legal moves remain.', FURINA_QUOTES.draw[0], null);
+      return;
+    }
+
+    if (game.in_threefold_repetition() || game.insufficient_material() || game.in_draw()) {
+      isGameOver = true;
+      stopClock();
+      playSound('defeat');
+      triggerGameOverModal('Draw Declared', 'The game concludes in a draw.', FURINA_QUOTES.draw[0], null);
+      return;
+    }
+
+    if (isConnected) {
+      if (isMyTurn) setFurinaQuote('yourTurn');
+      else setFurinaQuote('opponentTurn');
+    }
+  }
+
+  function triggerGameOverModal(title, subtitle, quote, isWinner) {
+    dom.gameOverTitle.textContent = title;
+    dom.gameOverSubtitle.textContent = subtitle;
+    dom.gameOverQuote.textContent = quote;
+
+    if (isWinner === true) {
+      dom.gameOverIcon.className = 'fa-solid fa-trophy text-gold-400';
+    } else if (isWinner === false) {
+      dom.gameOverIcon.className = 'fa-solid fa-heart-crack text-rose-400';
+    } else {
+      dom.gameOverIcon.className = 'fa-solid fa-scale-balanced text-hydro-400';
+    }
+
+    dom.gameOverModal.classList.remove('hidden');
+    dom.gameOverModal.classList.add('flex');
+  }
+
+  function closeGameOverModal() {
+    dom.gameOverModal.classList.add('hidden');
+    dom.gameOverModal.classList.remove('flex');
+  }
+
+  // ==========================================================================
+  // 7. PASS & PLAY, BLUETOOTH & MULTI-TAB MODES
+  // ==========================================================================
+
+  function startOfflinePassPlay() {
+    currentMode = 'offline_local';
+    isConnected = true;
+    isGameOver = false;
+
+    updateConnectionPill('connected', 'Pass & Play');
+
+    dom.selfName.textContent = 'Player 1 (White)';
+    dom.selfColorBadge.textContent = 'White';
+    dom.opponentName.textContent = 'Player 2 (Black)';
+    dom.opponentColorBadge.textContent = 'Black';
+
+    dom.takebackBtnText.textContent = 'Undo';
+
+    resetClocks();
+    game.reset();
+    board.position('start', true);
+    board.orientation('white');
+
+    switchSidebarTab('tab-moves');
+
+    playSound('victory');
+    setFurinaQuote('gameStart');
+    showToast('Local Pass & Play started!', 'success');
+    appendChatMessage('System', 'Local Pass & Play mode active.', 'system');
+    updateUI();
+  }
+
+  function initMultiTabOffline(role) {
+    currentMode = 'offline_tab';
+    isConnected = true;
+    isGameOver = false;
+
+    if (!('BroadcastChannel' in window)) {
+      showToast('BroadcastChannel not supported in this browser.', 'error');
+      return;
+    }
+
+    broadcastChan = new BroadcastChannel('fontaine_offline_chess_channel');
+    broadcastChan.onmessage = (e) => handleIncomingData(e.data);
+
+    updateConnectionPill('connected', `Offline Window (${role === 'w' ? 'White' : 'Black'})`);
+
+    myColor = role;
+    opponentColor = role === 'w' ? 'b' : 'w';
+    board.orientation(role === 'w' ? 'white' : 'black');
+
+    dom.selfName.textContent = role === 'w' ? 'You (White)' : 'You (Black)';
+    dom.selfColorBadge.textContent = role === 'w' ? 'White' : 'Black';
+    dom.opponentName.textContent = role === 'w' ? 'Opponent (Black)' : 'Opponent (White)';
+    dom.opponentColorBadge.textContent = role === 'w' ? 'Black' : 'White';
+
+    resetClocks();
+    game.reset();
+    board.position('start', true);
+
+    switchSidebarTab('tab-moves');
+
+    if (role === 'w') {
+      broadcastChan.postMessage({
+        type: 'init',
+        fen: game.fen(),
+        timePreset: timePreset,
+        whiteTime: whiteTime,
+        blackTime: blackTime
+      });
+    }
+
+    playSound('victory');
+    setFurinaQuote('gameStart');
+    showToast(`Started dual window as ${role === 'w' ? 'White' : 'Black'}!`, 'success');
+    appendChatMessage('System', 'Offline dual-window channel active.', 'system');
+    updateUI();
+  }
+
+  function checkBluetoothSupport() {
+    if ('bluetooth' in navigator) {
+      dom.bluetoothSupportBadge.textContent = 'Supported';
+      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300';
+      dom.bluetoothDesc.textContent = 'Web Bluetooth API is available. Click below to pair.';
+    } else {
+      dom.bluetoothSupportBadge.textContent = 'Not Supported';
+      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-rose-950 text-rose-300';
+      dom.bluetoothDesc.textContent = 'Web Bluetooth not supported on this browser engine.';
+    }
+  }
+
+  async function requestBluetoothConnection() {
+    if (!('bluetooth' in navigator)) {
+      showToast('Web Bluetooth not supported.', 'error');
+      return;
+    }
+
+    try {
+      showToast('Scanning for Bluetooth devices...', 'info');
+      bluetoothDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+
+      if (bluetoothDevice) {
+        showToast(`Paired: ${bluetoothDevice.name || 'Bluetooth Device'}`, 'success');
+        updateConnectionPill('connected', `BT: ${bluetoothDevice.name || 'Device'}`);
+        isConnected = true;
+        updateUI();
+      }
+    } catch (e) {
+      if (e.name !== 'NotFoundError') {
+        console.error('Bluetooth error:', e);
+        showToast(`Bluetooth pairing failed: ${e.message}`, 'warning');
+      }
+    }
+  }
+
+  // ==========================================================================
+  // 8. AUDIO & WALTZ MUSIC
   // ==========================================================================
 
   function getAudioContext() {
@@ -307,30 +1205,24 @@
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(320, now);
       osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
-
       gain.gain.setValueAtTime(0.35, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
       osc.connect(gain);
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.08);
-
     } else if (type === 'capture') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(680, now);
       osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
-
       gain.gain.setValueAtTime(0.4, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-
       osc.connect(gain);
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.12);
-
     } else if (type === 'check') {
       [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
         const osc = ctx.createOscillator();
@@ -344,7 +1236,6 @@
         osc.start(now + i * 0.04);
         osc.stop(now + 0.7 + i * 0.04);
       });
-
     } else if (type === 'victory') {
       [440, 554.37, 659.25, 880].forEach((freq, idx) => {
         const osc = ctx.createOscillator();
@@ -358,7 +1249,6 @@
         osc.start(now + idx * 0.14);
         osc.stop(now + idx * 0.14 + 0.46);
       });
-
     } else if (type === 'defeat') {
       [440, 415.3, 392, 349.23].forEach((freq, idx) => {
         const osc = ctx.createOscillator();
@@ -372,7 +1262,6 @@
         osc.start(now + idx * 0.15);
         osc.stop(now + idx * 0.15 + 0.52);
       });
-
     } else if (type === 'droplet') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -392,7 +1281,6 @@
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
-
     if (type === 'move') {
       osc.frequency.setValueAtTime(220, now);
       osc.frequency.setValueAtTime(440, now + 0.04);
@@ -402,7 +1290,6 @@
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.08);
-
     } else if (type === 'capture') {
       osc.frequency.setValueAtTime(580, now);
       osc.frequency.linearRampToValueAtTime(120, now + 0.12);
@@ -412,7 +1299,6 @@
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.12);
-
     } else {
       playOperaSound(ctx, master, type, now);
     }
@@ -422,7 +1308,6 @@
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-
     if (type === 'move') {
       osc.frequency.setValueAtTime(540, now);
       gain.gain.setValueAtTime(0.25, now);
@@ -431,7 +1316,6 @@
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.04);
-
     } else if (type === 'capture') {
       osc.frequency.setValueAtTime(920, now);
       gain.gain.setValueAtTime(0.3, now);
@@ -440,13 +1324,11 @@
       gain.connect(master);
       osc.start(now);
       osc.stop(now + 0.06);
-
     } else {
       playOperaSound(ctx, master, type, now);
     }
   }
 
-  // Procedural Fontaine Theatrical Waltz
   function toggleBackgroundMusic() {
     isMusicPlaying = !isMusicPlaying;
     if (isMusicPlaying) {
@@ -470,10 +1352,10 @@
     if (!ctx) return;
 
     const chords = [
-      { bass: 87.31, chord: [261.63, 311.13, 392.00] }, // Fm
-      { bass: 116.54, chord: [293.66, 349.23, 466.16] }, // Bbm
-      { bass: 130.81, chord: [261.63, 329.63, 392.00] }, // C maj
-      { bass: 87.31, chord: [261.63, 311.13, 392.00] }  // Fm
+      { bass: 87.31, chord: [261.63, 311.13, 392.00] },
+      { bass: 116.54, chord: [293.66, 349.23, 466.16] },
+      { bass: 130.81, chord: [261.63, 329.63, 392.00] },
+      { bass: 87.31, chord: [261.63, 311.13, 392.00] }
     ];
 
     const melody = [
@@ -517,7 +1399,6 @@
         melGain.connect(master);
         melOsc.start(now);
         melOsc.stop(now + 0.5);
-
       } else {
         currentChord.chord.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
@@ -546,7 +1427,7 @@
   }
 
   // ==========================================================================
-  // 4. CHESS CLOCK & TIMER
+  // 9. CHESS CLOCK & TIMER
   // ==========================================================================
 
   function resetClocks() {
@@ -668,418 +1549,7 @@
   }
 
   // ==========================================================================
-  // 5. TOAST NOTIFICATIONS & QUOTES
-  // ==========================================================================
-
-  function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `p-2.5 px-3 rounded-lg shadow-xl border backdrop-blur-md flex items-center gap-2 text-xs font-medium tracking-wide animate-scale-up pointer-events-auto ${
-      type === 'success'
-        ? 'bg-surface-900 text-hydro-300 border-hydro-500/40'
-        : type === 'warning'
-        ? 'bg-surface-900 text-amber-300 border-amber-500/40'
-        : type === 'error'
-        ? 'bg-surface-900 text-rose-300 border-rose-500/40'
-        : 'bg-surface-900 text-slate-200 border-white/10'
-    }`;
-
-    const icon =
-      type === 'success' ? 'fa-circle-check text-hydro-400' :
-      type === 'warning' ? 'fa-triangle-exclamation text-amber-400' :
-      type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-slate-400';
-
-    toast.innerHTML = `<i class="fa-solid ${icon} text-xs shrink-0"></i><span>${message}</span>`;
-    dom.toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(8px)';
-      setTimeout(() => toast.remove(), 250);
-    }, 3200);
-  }
-
-  function setFurinaQuote(category) {
-    const quotes = FURINA_QUOTES[category] || FURINA_QUOTES.welcome;
-    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-    dom.furinaQuoteText.textContent = randomQuote;
-  }
-
-  // ==========================================================================
-  // 6. CHESS ENGINE & PHYSICAL PIECE MOVEMENT
-  // ==========================================================================
-
-  function initChess() {
-    game = new Chess();
-
-    const config = {
-      draggable: true,
-      position: 'start',
-      orientation: myColor === 'w' ? 'white' : 'black',
-      pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-      moveSpeed: animSpeedDuration,
-      snapbackSpeed: 150,
-      snapSpeed: 70,
-      onDragStart: handleDragStart,
-      onDrop: handleDrop,
-      onSnapEnd: handleSnapEnd
-    };
-
-    board = Chessboard('chessBoard', config);
-
-    window.addEventListener('resize', () => {
-      if (board) {
-        board.resize();
-        reapplyLastMoveHighlights();
-      }
-    });
-
-    updateUI();
-  }
-
-  // ==========================================================================
-  // 7. DRAG-AND-DROP & MOVE VALIDATION
-  // ==========================================================================
-
-  function handleDragStart(source, piece, position, orientation) {
-    if (game.game_over() || isGameOver) return false;
-
-    if (currentMode === 'offline_local') {
-      const turn = game.turn();
-      if ((turn === 'w' && piece.search(/^b/) !== -1) || (turn === 'b' && piece.search(/^w/) !== -1)) {
-        return false;
-      }
-      highlightLegalMoves(source);
-      return true;
-    }
-
-    if (!isConnected) {
-      showToast('Connect with opponent to start playing!', 'warning');
-      return false;
-    }
-
-    if (game.turn() !== myColor) return false;
-
-    if (
-      (myColor === 'w' && piece.search(/^b/) !== -1) ||
-      (myColor === 'b' && piece.search(/^w/) !== -1)
-    ) {
-      return false;
-    }
-
-    highlightLegalMoves(source);
-    return true;
-  }
-
-  function handleDrop(source, target) {
-    removeSquareHighlights();
-    if (source === target) return;
-
-    const isPromo = isPromotionMove(source, target);
-    if (isPromo) {
-      const testMove = game.move({ from: source, to: target, promotion: 'q' });
-      if (testMove === null) return 'snapback';
-      game.undo();
-      pendingPromotion = { source, target };
-      openPromotionModal();
-      return 'snapback';
-    }
-
-    const move = game.move({ from: source, to: target, promotion: 'q' });
-    if (move === null) return 'snapback';
-
-    onMoveExecuted(move);
-    broadcastMove(move);
-  }
-
-  function handleSnapEnd() {
-    board.position(game.fen(), false);
-    reapplyLastMoveHighlights();
-
-    if (currentMode === 'offline_local' && autoFlipEnabled && !isGameOver) {
-      const nextTurn = game.turn();
-      board.orientation(nextTurn === 'w' ? 'white' : 'black');
-    }
-  }
-
-  function isPromotionMove(source, target) {
-    const piece = game.get(source);
-    if (!piece || piece.type !== 'p') return false;
-    if (piece.color !== game.turn()) return false;
-    const targetRank = target.charAt(1);
-    return (
-      (piece.color === 'w' && targetRank === '8') ||
-      (piece.color === 'b' && targetRank === '1')
-    );
-  }
-
-  function onMoveExecuted(move) {
-    lastMoveSquares.from = move.from;
-    lastMoveSquares.to = move.to;
-
-    if (move.captured) {
-      playSound('capture');
-    } else {
-      playSound('move');
-    }
-
-    if (!clockRunning && timePreset.base > 0) {
-      startClock();
-    } else {
-      switchClockTurn();
-    }
-
-    updateUI();
-    reapplyLastMoveHighlights();
-    checkGameStatus();
-  }
-
-  function broadcastMove(move) {
-    const packet = {
-      type: 'move',
-      from: move.from,
-      to: move.to,
-      promotion: move.promotion,
-      san: move.san,
-      fen: game.fen(),
-      whiteTime: whiteTime,
-      blackTime: blackTime
-    };
-
-    if (currentMode === 'online') {
-      sendWebRTC(packet);
-    } else if (currentMode === 'offline_tab' && broadcastChan) {
-      broadcastChan.postMessage(packet);
-    }
-  }
-
-  // ==========================================================================
-  // 8. SQUARE HIGHLIGHTING
-  // ==========================================================================
-
-  function removeSquareHighlights() {
-    $('#chessBoard .square-55d63').removeClass(
-      'highlight-legal highlight-legal-capture highlight-selected'
-    );
-  }
-
-  function highlightLegalMoves(source) {
-    removeSquareHighlights();
-    $('#chessBoard .square-' + source).addClass('highlight-selected');
-
-    if (!showLegalDots) return;
-
-    const moves = game.moves({ square: source, verbose: true });
-    if (moves.length === 0) return;
-
-    for (let i = 0; i < moves.length; i++) {
-      const destSquare = moves[i].to;
-      const $square = $('#chessBoard .square-' + destSquare);
-      if (moves[i].captured) {
-        $square.addClass('highlight-legal-capture');
-      } else {
-        $square.addClass('highlight-legal');
-      }
-    }
-  }
-
-  function reapplyLastMoveHighlights() {
-    $('#chessBoard .square-55d63').removeClass('highlight-last-move highlight-check');
-
-    if (lastMoveSquares.from && lastMoveSquares.to) {
-      $('#chessBoard .square-' + lastMoveSquares.from).addClass('highlight-last-move');
-      $('#chessBoard .square-' + lastMoveSquares.to).addClass('highlight-last-move');
-    }
-
-    if (game.in_check()) {
-      const kingSquare = findKingSquare(game.turn());
-      if (kingSquare) {
-        $('#chessBoard .square-' + kingSquare).addClass('highlight-check');
-      }
-    }
-  }
-
-  function findKingSquare(color) {
-    const b = game.board();
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        const piece = b[r][c];
-        if (piece && piece.type === 'k' && piece.color === color) {
-          return files[c] + (8 - r);
-        }
-      }
-    }
-    return null;
-  }
-
-  // ==========================================================================
-  // 9. PROMOTION MODAL
-  // ==========================================================================
-
-  function openPromotionModal() {
-    const promoColor = game.turn();
-    const prefix = promoColor === 'w' ? 'w' : 'b';
-    dom.promoImgQ.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}Q.png`;
-    dom.promoImgR.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}R.png`;
-    dom.promoImgB.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}B.png`;
-    dom.promoImgN.src = `https://chessboardjs.com/img/chesspieces/wikipedia/${prefix}N.png`;
-
-    dom.promotionModal.classList.remove('hidden');
-    dom.promotionModal.classList.add('flex');
-    playSound('droplet');
-  }
-
-  function closePromotionModal() {
-    dom.promotionModal.classList.add('hidden');
-    dom.promotionModal.classList.remove('flex');
-  }
-
-  function selectPromotionPiece(pieceType) {
-    closePromotionModal();
-    if (!pendingPromotion) return;
-
-    const { source, target } = pendingPromotion;
-    pendingPromotion = null;
-
-    const move = game.move({ from: source, to: target, promotion: pieceType });
-    if (move) {
-      board.position(game.fen(), true);
-      onMoveExecuted(move);
-      broadcastMove(move);
-    }
-  }
-
-  // ==========================================================================
-  // 10. MOVE TAKEBACK / UNDO
-  // ==========================================================================
-
-  function handleTakebackRequest() {
-    if (game.history().length === 0) {
-      showToast('No moves made yet.', 'warning');
-      return;
-    }
-
-    if (currentMode === 'offline_local') {
-      executeUndo();
-      showToast('Move retracted.', 'info');
-      return;
-    }
-
-    if (!isConnected) {
-      showToast('Connect with opponent to request takeback.', 'warning');
-      return;
-    }
-
-    const packet = { type: 'takeback_request' };
-    if (currentMode === 'online') sendWebRTC(packet);
-    if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(packet);
-
-    showToast('Takeback request sent to opponent...', 'info');
-  }
-
-  function executeUndo() {
-    const undone = game.undo();
-    if (!undone) return;
-
-    board.position(game.fen(), true);
-
-    const hist = game.history({ verbose: true });
-    if (hist.length > 0) {
-      const last = hist[hist.length - 1];
-      lastMoveSquares.from = last.from;
-      lastMoveSquares.to = last.to;
-    } else {
-      lastMoveSquares = { from: null, to: null };
-    }
-
-    updateUI();
-    reapplyLastMoveHighlights();
-    playSound('droplet');
-  }
-
-  // ==========================================================================
-  // 11. WIN / LOSS / DRAW CHECKS
-  // ==========================================================================
-
-  function checkGameStatus() {
-    const isMyTurn = game.turn() === myColor;
-
-    if (game.in_check() && !game.in_checkmate()) {
-      playSound('check');
-      dom.floatingCheckBanner.classList.remove('hidden');
-      dom.floatingCheckBanner.classList.add('flex');
-      dom.floatingCheckText.textContent = isMyTurn ? 'Check! King imperiled!' : 'Opponent in Check!';
-      setFurinaQuote('check');
-    } else {
-      dom.floatingCheckBanner.classList.add('hidden');
-      dom.floatingCheckBanner.classList.remove('flex');
-    }
-
-    if (game.in_checkmate()) {
-      isGameOver = true;
-      stopClock();
-      const winnerColor = game.turn() === 'w' ? 'b' : 'w';
-      const isWinner = winnerColor === myColor;
-
-      if (currentMode === 'offline_local') {
-        playSound('victory');
-        triggerGameOverModal('Checkmate!', `${winnerColor === 'w' ? 'White' : 'Black'} wins!`, FURINA_QUOTES.checkmateWhite[0], null);
-      } else if (isWinner) {
-        playSound('victory');
-        triggerGameOverModal('Victory by Checkmate!', 'Triumph! You have defeated the opposing sovereign.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[0] : FURINA_QUOTES.checkmateBlack[0], true);
-      } else {
-        playSound('defeat');
-        triggerGameOverModal('Defeat by Checkmate', 'The curtains fall upon your king.', winnerColor === 'w' ? FURINA_QUOTES.checkmateWhite[1] : FURINA_QUOTES.checkmateBlack[1], false);
-      }
-      return;
-    }
-
-    if (game.in_stalemate()) {
-      isGameOver = true;
-      stopClock();
-      playSound('defeat');
-      triggerGameOverModal('Stalemate (Draw)', 'No legal moves remain.', FURINA_QUOTES.draw[0], null);
-      return;
-    }
-
-    if (game.in_threefold_repetition() || game.insufficient_material() || game.in_draw()) {
-      isGameOver = true;
-      stopClock();
-      playSound('defeat');
-      triggerGameOverModal('Draw Declared', 'The game concludes in a draw.', FURINA_QUOTES.draw[0], null);
-      return;
-    }
-
-    if (isConnected) {
-      if (isMyTurn) setFurinaQuote('yourTurn');
-      else setFurinaQuote('opponentTurn');
-    }
-  }
-
-  function triggerGameOverModal(title, subtitle, quote, isWinner) {
-    dom.gameOverTitle.textContent = title;
-    dom.gameOverSubtitle.textContent = subtitle;
-    dom.gameOverQuote.textContent = quote;
-
-    if (isWinner === true) {
-      dom.gameOverIcon.className = 'fa-solid fa-trophy text-gold-400';
-    } else if (isWinner === false) {
-      dom.gameOverIcon.className = 'fa-solid fa-heart-crack text-rose-400';
-    } else {
-      dom.gameOverIcon.className = 'fa-solid fa-scale-balanced text-hydro-400';
-    }
-
-    dom.gameOverModal.classList.remove('hidden');
-    dom.gameOverModal.classList.add('flex');
-  }
-
-  function closeGameOverModal() {
-    dom.gameOverModal.classList.add('hidden');
-    dom.gameOverModal.classList.remove('flex');
-  }
-
-  // ==========================================================================
-  // 12. UI SYNCHRONIZATION
+  // 10. UI & CHAT
   // ==========================================================================
 
   function updateUI() {
@@ -1103,7 +1573,7 @@
       dom.opponentTurnBadge.classList.add('hidden');
 
       dom.verdictStatusTitle.textContent = 'Awaiting Opponent';
-      dom.verdictStatusDesc.textContent = 'Share your invite link or connect devices to begin.';
+      dom.verdictStatusDesc.textContent = 'Share your invite link or connect to begin.';
 
     } else if (isGameOver) {
       dom.selfTurnBadge.classList.add('hidden');
@@ -1220,398 +1690,6 @@
     dom.moveLogContainer.scrollTop = dom.moveLogContainer.scrollHeight;
   }
 
-  // ==========================================================================
-  // 13. WEBRTC & DATA HANDLING
-  // ==========================================================================
-
-  function sendWebRTC(data) {
-    if (connection && connection.open) {
-      try {
-        connection.send(data);
-      } catch (e) {
-        console.error('WebRTC send error:', e);
-      }
-    }
-  }
-
-  function handleIncomingData(data) {
-    if (!data || typeof data !== 'object') return;
-
-    switch (data.type) {
-      case 'init':
-        if (data.timePreset) {
-          timePreset = data.timePreset;
-          whiteTime = data.whiteTime || timePreset.base;
-          blackTime = data.blackTime || timePreset.base;
-          updateClockDisplay();
-        }
-        if (data.fen && data.fen !== game.fen()) {
-          game.load(data.fen);
-          board.position(data.fen, true);
-        }
-        break;
-
-      case 'move':
-        if (data.whiteTime !== undefined && data.blackTime !== undefined) {
-          whiteTime = data.whiteTime;
-          blackTime = data.blackTime;
-        }
-
-        const move = game.move({
-          from: data.from,
-          to: data.to,
-          promotion: data.promotion || 'q'
-        });
-
-        if (move) {
-          board.position(game.fen(), true);
-          onMoveExecuted(move);
-        } else if (data.fen) {
-          game.load(data.fen);
-          board.position(data.fen, true);
-          updateUI();
-          checkGameStatus();
-        }
-        break;
-
-      case 'takeback_request':
-        playSound('droplet');
-        dom.takebackModal.classList.remove('hidden');
-        dom.takebackModal.classList.add('flex');
-        break;
-
-      case 'takeback_response':
-        if (data.accepted) {
-          executeUndo();
-          showToast('Takeback granted! Move rewound.', 'success');
-        } else {
-          showToast('Opponent declined takeback.', 'warning');
-        }
-        break;
-
-      case 'chat':
-        appendChatMessage(data.sender, data.text, 'opponent');
-        playSound('droplet');
-        break;
-
-      case 'draw_offer':
-        playSound('check');
-        const acceptDraw = confirm('Opponent offers a draw. Accept?');
-        const drawResp = { type: 'draw_response', accepted: acceptDraw };
-        if (currentMode === 'online') sendWebRTC(drawResp);
-        if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(drawResp);
-
-        if (acceptDraw) {
-          isGameOver = true;
-          stopClock();
-          triggerGameOverModal('Draw Agreed', 'Both players agreed to a draw.', FURINA_QUOTES.draw[0], null);
-        }
-        break;
-
-      case 'draw_response':
-        if (data.accepted) {
-          isGameOver = true;
-          stopClock();
-          triggerGameOverModal('Draw Agreed', 'Opponent accepted the draw.', FURINA_QUOTES.draw[0], null);
-        } else {
-          showToast('Draw offer declined.', 'warning');
-        }
-        break;
-
-      case 'resign':
-        isGameOver = true;
-        stopClock();
-        playSound('victory');
-        triggerGameOverModal('Victory by Resignation!', 'Opponent resigned.', FURINA_QUOTES.checkmateWhite[0], true);
-        break;
-
-      case 'rematch_offer':
-        playSound('check');
-        const acceptRematch = confirm('Opponent requests a rematch. Accept?');
-        const remResp = { type: 'rematch_response', accepted: acceptRematch };
-        if (currentMode === 'online') sendWebRTC(remResp);
-        if (currentMode === 'offline_tab' && broadcastChan) broadcastChan.postMessage(remResp);
-
-        if (acceptRematch) executeRematch();
-        break;
-
-      case 'rematch_response':
-        if (data.accepted) {
-          executeRematch();
-          showToast('Rematch accepted!', 'success');
-        } else {
-          showToast('Rematch declined.', 'warning');
-        }
-        break;
-    }
-  }
-
-  // ==========================================================================
-  // 14. CONNECTION LIFECYCLES: ONLINE, PASS & PLAY, BLUETOOTH, MULTI-TAB
-  // ==========================================================================
-
-  function initHost() {
-    isHost = true;
-    myColor = 'w';
-    opponentColor = 'b';
-
-    dom.hostInitialActions.classList.add('hidden');
-    dom.hostLinkBox.classList.remove('hidden');
-
-    updateConnectionPill('connecting', 'Generating Signal...');
-
-    peer = new Peer({ debug: 1 });
-
-    peer.on('open', (id) => {
-      myPeerId = id;
-      const shareUrl = `${window.location.origin}${window.location.pathname}?join=${encodeURIComponent(id)}`;
-      dom.shareLinkInput.value = shareUrl;
-      dom.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
-
-      // Update Settings Peer ID field
-      dom.settingsPeerIdInput.value = id;
-
-      updateConnectionPill('waiting', 'Awaiting Opponent');
-      setFurinaQuote('welcome');
-      showToast('Game created! Share invite link.', 'success');
-    });
-
-    peer.on('connection', (incomingConn) => {
-      if (connection && connection.open) {
-        incomingConn.close();
-        return;
-      }
-      setupConnection(incomingConn);
-    });
-
-    peer.on('error', (err) => {
-      console.error('PeerJS Host Error:', err);
-      updateConnectionPill('disconnected', 'Signal Error');
-      showToast(`Connection error: ${err.type || err.message}`, 'error');
-    });
-  }
-
-  function initJoiner(hostPeerId) {
-    isHost = false;
-    myColor = 'b';
-    opponentColor = 'w';
-    targetPeerId = hostPeerId;
-
-    board.orientation('black');
-
-    dom.selfName.textContent = 'You (Black)';
-    dom.selfColorBadge.textContent = 'Black';
-    dom.selfAvatar.innerHTML = '<i class="fa-solid fa-chess-knight"></i>';
-
-    dom.opponentName.textContent = 'Host (White)';
-    dom.opponentColorBadge.textContent = 'White';
-    dom.opponentAvatar.innerHTML = '<i class="fa-solid fa-crown text-gold-400"></i>';
-
-    dom.joinDefaultContent.classList.add('hidden');
-    dom.autoJoinState.classList.remove('hidden');
-    dom.autoJoinHostText.textContent = `Connecting to Host: ${hostPeerId.substring(0, 10)}...`;
-
-    updateConnectionPill('connecting', 'Connecting...');
-
-    peer = new Peer({ debug: 1 });
-
-    peer.on('open', (myId) => {
-      myPeerId = myId;
-      dom.settingsPeerIdInput.value = myId;
-      const conn = peer.connect(hostPeerId, { reliable: true });
-      setupConnection(conn);
-    });
-
-    peer.on('error', (err) => {
-      console.error('PeerJS Joiner Error:', err);
-      updateConnectionPill('disconnected', 'Connection Failed');
-      showToast('Could not connect to host.', 'error');
-    });
-  }
-
-  function setupConnection(conn) {
-    connection = conn;
-
-    connection.on('open', () => {
-      isConnected = true;
-      isGameOver = false;
-
-      updateConnectionPill('connected', 'Live (P2P)');
-      resetClocks();
-
-      switchSidebarTab('tab-moves');
-
-      if (isHost) {
-        sendWebRTC({
-          type: 'init',
-          fen: game.fen(),
-          hostColor: 'w',
-          timePreset: timePreset,
-          whiteTime: whiteTime,
-          blackTime: blackTime
-        });
-      }
-
-      playSound('victory');
-      setFurinaQuote('gameStart');
-      showToast(
-        isHost ? 'Challenger connected! White moves first.' : 'Connected to host! White moves first.',
-        'success'
-      );
-
-      appendChatMessage('System', 'P2P WebRTC data connection established.', 'system');
-      updateUI();
-    });
-
-    connection.on('data', handleIncomingData);
-
-    connection.on('close', () => {
-      isConnected = false;
-      stopClock();
-      updateConnectionPill('disconnected', 'Disconnected');
-      playSound('defeat');
-      setFurinaQuote('disconnect');
-      showToast('Opponent disconnected.', 'error');
-      appendChatMessage('System', 'Opponent disconnected.', 'system');
-      updateUI();
-    });
-
-    connection.on('error', (err) => {
-      console.error('Connection channel error:', err);
-      showToast('Connection error encountered.', 'error');
-    });
-  }
-
-  // --- PASS & PLAY LOCAL MODE ---
-  function startOfflinePassPlay() {
-    currentMode = 'offline_local';
-    isConnected = true;
-    isGameOver = false;
-
-    updateConnectionPill('connected', 'Pass & Play');
-
-    dom.selfName.textContent = 'Player 1 (White)';
-    dom.selfColorBadge.textContent = 'White';
-    dom.opponentName.textContent = 'Player 2 (Black)';
-    dom.opponentColorBadge.textContent = 'Black';
-
-    dom.takebackBtnText.textContent = 'Undo';
-
-    resetClocks();
-    game.reset();
-    board.position('start', true);
-    board.orientation('white');
-
-    switchSidebarTab('tab-moves');
-
-    playSound('victory');
-    setFurinaQuote('gameStart');
-    showToast('Local Pass & Play started!', 'success');
-    appendChatMessage('System', 'Local Pass & Play mode active.', 'system');
-    updateUI();
-  }
-
-  // --- MULTI-TAB DUAL WINDOW MODE ---
-  function initMultiTabOffline(role) {
-    currentMode = 'offline_tab';
-    isConnected = true;
-    isGameOver = false;
-
-    if (!('BroadcastChannel' in window)) {
-      showToast('BroadcastChannel not supported in this browser.', 'error');
-      return;
-    }
-
-    broadcastChan = new BroadcastChannel('fontaine_offline_chess_channel');
-    broadcastChan.onmessage = (e) => handleIncomingData(e.data);
-
-    updateConnectionPill('connected', `Offline Window (${role === 'w' ? 'White' : 'Black'})`);
-
-    myColor = role;
-    opponentColor = role === 'w' ? 'b' : 'w';
-    board.orientation(role === 'w' ? 'white' : 'black');
-
-    dom.selfName.textContent = role === 'w' ? 'You (White)' : 'You (Black)';
-    dom.selfColorBadge.textContent = role === 'w' ? 'White' : 'Black';
-    dom.opponentName.textContent = role === 'w' ? 'Opponent (Black)' : 'Opponent (White)';
-    dom.opponentColorBadge.textContent = role === 'w' ? 'Black' : 'White';
-
-    resetClocks();
-    game.reset();
-    board.position('start', true);
-
-    switchSidebarTab('tab-moves');
-
-    if (role === 'w') {
-      broadcastChan.postMessage({
-        type: 'init',
-        fen: game.fen(),
-        timePreset: timePreset,
-        whiteTime: whiteTime,
-        blackTime: blackTime
-      });
-    }
-
-    playSound('victory');
-    setFurinaQuote('gameStart');
-    showToast(`Started dual window as ${role === 'w' ? 'White' : 'Black'}!`, 'success');
-    appendChatMessage('System', 'Offline dual-window channel active.', 'system');
-    updateUI();
-  }
-
-  // --- WEB BLUETOOTH ---
-  function checkBluetoothSupport() {
-    if ('bluetooth' in navigator) {
-      dom.bluetoothSupportBadge.textContent = 'Supported';
-      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-emerald-950 text-emerald-300';
-      dom.bluetoothDesc.textContent = 'Web Bluetooth API is available. Click below to pair.';
-    } else {
-      dom.bluetoothSupportBadge.textContent = 'Not Supported';
-      dom.bluetoothSupportBadge.className = 'text-[10px] font-mono px-1.5 rounded bg-rose-950 text-rose-300';
-      dom.bluetoothDesc.textContent = 'Web Bluetooth not supported on this browser engine.';
-    }
-  }
-
-  async function requestBluetoothConnection() {
-    if (!('bluetooth' in navigator)) {
-      showToast('Web Bluetooth not supported.', 'error');
-      return;
-    }
-
-    try {
-      showToast('Scanning for Bluetooth devices...', 'info');
-      bluetoothDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-
-      if (bluetoothDevice) {
-        showToast(`Paired: ${bluetoothDevice.name || 'Bluetooth Device'}`, 'success');
-        updateConnectionPill('connected', `BT: ${bluetoothDevice.name || 'Device'}`);
-        isConnected = true;
-        updateUI();
-      }
-    } catch (e) {
-      if (e.name !== 'NotFoundError') {
-        console.error('Bluetooth error:', e);
-        showToast(`Bluetooth pairing failed: ${e.message}`, 'warning');
-      }
-    }
-  }
-
-  function updateConnectionPill(status, text) {
-    dom.connectionPillText.textContent = text;
-    const dot = dom.connectionPill.querySelector('span:first-child');
-    if (dot) {
-      dot.className =
-        'w-1.5 h-1.5 rounded-full ' +
-        (status === 'connected' ? 'bg-emerald-400' :
-         status === 'waiting' ? 'bg-hydro-400 animate-ping' :
-         status === 'connecting' ? 'bg-amber-400 animate-ping' : 'bg-rose-400');
-    }
-  }
-
-  // ==========================================================================
-  // 15. CHAT & REMATCH
-  // ==========================================================================
-
   function appendChatMessage(sender, text, type = 'opponent') {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const bubble = document.createElement('div');
@@ -1684,18 +1762,8 @@
     showToast('Rematch started! Curtains rise.', 'success');
   }
 
-  function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag));
-  }
-
   // ==========================================================================
-  // 16. TAB NAVIGATION, MODE SWITCHER & SETTINGS LOGIC
+  // 11. TABS & SETTINGS LOGIC
   // ==========================================================================
 
   function switchSidebarTab(targetTabId) {
@@ -1715,7 +1783,6 @@
       }
     });
 
-    // On mobile screens, scroll down to the sidebar if opened from header
     if (window.innerWidth < 1024) {
       const el = document.getElementById(targetTabId);
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -1762,7 +1829,7 @@
       }
     });
 
-    showToast(`Board theme changed to: ${theme.name}`, 'info');
+    showToast(`Board theme: ${theme.name}`, 'info');
   }
 
   function setAnimationSpeed(speedKey) {
@@ -1778,20 +1845,18 @@
     else if (speedKey === 'slow') animSpeedDuration = 380;
     else animSpeedDuration = 230;
 
-    // Update chessboard move speed dynamically if initialized
     if (board && board.config) {
       board.config.moveSpeed = animSpeedDuration;
     }
 
-    showToast(`Animation speed set to: ${speedKey.toUpperCase()}`, 'info');
+    showToast(`Animation speed: ${speedKey.toUpperCase()}`, 'info');
   }
 
   // ==========================================================================
-  // 17. EVENT BINDINGS & APP INITIALIZATION
+  // 12. EVENT BINDINGS & APP INITIALIZATION
   // ==========================================================================
 
   function bindEvents() {
-    // Sidebar Tabs
     dom.sidebarTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
         const targetTab = e.currentTarget.getAttribute('data-tab');
@@ -1799,12 +1864,10 @@
       });
     });
 
-    // Top Header Settings Button -> Switches to Settings Tab
     dom.soundSettingsBtn.addEventListener('click', () => {
       switchSidebarTab('tab-settings');
     });
 
-    // Mode Switcher Buttons
     dom.modeTabs.forEach(btn => {
       btn.addEventListener('click', (e) => {
         dom.modeTabs.forEach(b => b.classList.remove('active'));
@@ -1814,7 +1877,6 @@
       });
     });
 
-    // Timer Selector Buttons
     dom.timerButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         dom.timerButtons.forEach(b => b.classList.remove('active'));
@@ -1827,8 +1889,8 @@
       });
     });
 
-    // Host & Join Buttons
-    dom.createGameBtn.addEventListener('click', () => initHost());
+    // Create / Regenerate Host Link
+    dom.createGameBtn.addEventListener('click', () => initHost(true));
 
     dom.copyLinkBtn.addEventListener('click', () => {
       const shareUrl = dom.shareLinkInput.value;
@@ -1837,7 +1899,7 @@
       navigator.clipboard.writeText(shareUrl).then(() => {
         dom.copyIcon.className = 'fa-solid fa-check text-emerald-400';
         dom.copyBtnText.textContent = 'Copied';
-        showToast('Link copied!', 'success');
+        showToast('Invite link copied!', 'success');
         playSound('droplet');
 
         setTimeout(() => {
@@ -1847,21 +1909,16 @@
       }).catch(() => {
         dom.shareLinkInput.select();
         document.execCommand('copy');
-        showToast('Link copied!', 'success');
+        showToast('Link copied to clipboard!', 'success');
       });
     });
 
+    // Manual Join Button with clean ID extraction
     dom.manualJoinBtn.addEventListener('click', () => {
-      let val = dom.manualJoinInput.value.trim();
-      if (!val) return;
-      if (val.includes('?join=')) {
-        try {
-          const url = new URL(val);
-          val = url.searchParams.get('join') || val;
-        } catch (e) {
-          const m = val.match(/\?join=([^&#]+)/);
-          if (m) val = m[1];
-        }
+      const val = extractPeerId(dom.manualJoinInput.value);
+      if (!val) {
+        showToast('Please enter a valid Peer ID or invite link.', 'warning');
+        return;
       }
       initJoiner(val);
     });
@@ -1870,7 +1927,6 @@
       window.location.href = window.location.origin + window.location.pathname;
     });
 
-    // QR Modal
     dom.showQrBtn.addEventListener('click', () => {
       dom.qrModal.classList.remove('hidden');
       dom.qrModal.classList.add('flex');
@@ -1880,7 +1936,6 @@
       dom.qrModal.classList.remove('flex');
     });
 
-    // Pass & Play, Bluetooth, Multi-Tab Buttons
     dom.startPassPlayBtn.addEventListener('click', () => startOfflinePassPlay());
     dom.autoFlipToggle.addEventListener('change', (e) => {
       autoFlipEnabled = e.target.checked;
@@ -1892,7 +1947,6 @@
     dom.startBroadcastWhiteBtn.addEventListener('click', () => initMultiTabOffline('w'));
     dom.startBroadcastBlackBtn.addEventListener('click', () => initMultiTabOffline('b'));
 
-    // In-game Bottom Bar Buttons
     dom.takebackBtn.addEventListener('click', () => handleTakebackRequest());
     dom.flipBoardBtn.addEventListener('click', () => {
       board.flip();
@@ -1936,7 +1990,6 @@
       }
     });
 
-    // Takeback Modal Handlers
     dom.acceptTakebackBtn.addEventListener('click', () => {
       dom.takebackModal.classList.add('hidden');
       dom.takebackModal.classList.remove('flex');
@@ -1960,7 +2013,6 @@
       showToast('Takeback declined.', 'info');
     });
 
-    // Rematch
     dom.rematchBtn.addEventListener('click', () => {
       if (currentMode === 'offline_local') {
         executeRematch();
@@ -1978,7 +2030,6 @@
 
     dom.closeGameOverModalBtn.addEventListener('click', closeGameOverModal);
 
-    // Promotion Buttons
     document.querySelectorAll('.promotion-piece-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const piece = e.currentTarget.getAttribute('data-piece');
@@ -1986,11 +2037,7 @@
       });
     });
 
-    // ========================================================================
-    // SETTINGS TAB EVENT HANDLERS
-    // ========================================================================
-
-    // 1. Board Themes
+    // Settings Event Handlers
     dom.boardThemeSwatches.forEach(swatch => {
       swatch.addEventListener('click', (e) => {
         const theme = e.currentTarget.getAttribute('data-theme');
@@ -1998,7 +2045,6 @@
       });
     });
 
-    // 2. Animation Speed
     dom.animSpeedButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const speed = e.currentTarget.getAttribute('data-speed');
@@ -2006,38 +2052,33 @@
       });
     });
 
-    // 3. Legal Move Dots Toggle
     dom.toggleLegalDots.addEventListener('change', (e) => {
       showLegalDots = e.target.checked;
       document.body.classList.toggle('hide-legal-dots', !showLegalDots);
-      showToast(`Legal move dots: ${showLegalDots ? 'Visible' : 'Hidden'}`, 'info');
+      showToast(`Legal dots: ${showLegalDots ? 'On' : 'Off'}`, 'info');
     });
 
-    // 4. Coordinates Toggle
     dom.toggleCoords.addEventListener('change', (e) => {
       showCoordinates = e.target.checked;
       document.body.classList.toggle('hide-coords', !showCoordinates);
-      showToast(`Board coordinates: ${showCoordinates ? 'Visible' : 'Hidden'}`, 'info');
+      showToast(`Coordinates: ${showCoordinates ? 'On' : 'Off'}`, 'info');
     });
 
-    // 5. Sound Style Buttons
     dom.soundStyleButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         dom.soundStyleButtons.forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
         soundStyle = e.currentTarget.getAttribute('data-style');
         playSound('move');
-        showToast(`Sound theme: ${soundStyle.toUpperCase()}`, 'info');
+        showToast(`Sound: ${soundStyle.toUpperCase()}`, 'info');
       });
     });
 
-    // 6. Test Sound Button
     dom.testSoundBtn.addEventListener('click', () => {
       playSound('move');
       setTimeout(() => playSound('check'), 180);
     });
 
-    // 7. Sliders (Volume)
     dom.sfxVolumeSlider.addEventListener('input', (e) => {
       soundVolume = parseInt(e.target.value, 10) / 100;
       dom.sfxVolumeLabel.textContent = `${e.target.value}%`;
@@ -2048,24 +2089,21 @@
       dom.musicVolumeLabel.textContent = `${e.target.value}%`;
     });
 
-    // 8. Music Toggles
     dom.bgMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
     dom.modalMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
 
-    // 9. Copy Peer ID from Settings
     dom.settingsCopyPeerIdBtn.addEventListener('click', () => {
       const peerId = dom.settingsPeerIdInput.value;
-      if (!peerId || peerId.startsWith('Not')) {
-        showToast('Initialize game first to generate Peer ID.', 'warning');
+      if (!peerId || peerId.startsWith('Not') || peerId.startsWith('Connecting')) {
+        showToast('Peer ID is still initializing.', 'warning');
         return;
       }
       navigator.clipboard.writeText(peerId).then(() => {
-        showToast('Peer ID copied to clipboard!', 'success');
+        showToast('Peer ID copied!', 'success');
         playSound('droplet');
       });
     });
 
-    // 10. Reset Preferences Button
     dom.resetSettingsBtn.addEventListener('click', () => {
       setBoardTheme('fontaine');
       setAnimationSpeed('normal');
@@ -2093,7 +2131,6 @@
       showToast('Settings reset to defaults.', 'info');
     });
 
-    // Protocol Help Modal
     dom.helpModalBtn.addEventListener('click', () => {
       dom.helpModal.classList.remove('hidden');
       dom.helpModal.classList.add('flex');
@@ -2107,7 +2144,6 @@
       dom.helpModal.classList.remove('flex');
     });
 
-    // Chat
     dom.chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
       handleSendChat(dom.chatInput.value);
@@ -2121,6 +2157,10 @@
     });
   }
 
+  // ==========================================================================
+  // 13. APP BOOTSTRAP
+  // ==========================================================================
+
   function initApp() {
     initChess();
     bindEvents();
@@ -2128,16 +2168,15 @@
     resetClocks();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const joinId = urlParams.get('join');
+    const rawJoin = urlParams.get('join');
+    const joinId = extractPeerId(rawJoin);
 
-    if (joinId && joinId.trim() !== '') {
-      initJoiner(joinId.trim());
+    if (joinId) {
+      // JOIN MODE: Initiates peer and connects to host ID found in URL
+      initJoiner(joinId);
     } else {
-      isHost = true;
-      myColor = 'w';
-      opponentColor = 'b';
-      board.orientation('white');
-      updateConnectionPill('waiting', 'Ready to Host');
+      // HOST MODE: Generates Peer ID immediately so invite link is ready instantly
+      initHost();
     }
   }
 
