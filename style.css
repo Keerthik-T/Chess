@@ -9,11 +9,9 @@
   --bg-clock: #161d2b;
   --border-subtle: rgba(255, 255, 255, 0.07);
 
-  /* Chessboard Squares: Clean Minimalist High-Contrast Slate/Hydro */
+  /* Chessboard Squares: Default Fontaine Hydro / Slate */
   --square-light: #ebecd0;
-  --square-light-coord: #739552;
   --square-dark: #2c4d6f;
-  --square-dark-coord: #ebecd0;
 
   --accent-hydro: #00d2ff;
   --accent-gold: #f5d061;
@@ -35,7 +33,7 @@ body {
   -webkit-user-select: none;
 }
 
-/* Light & Dark Squares */
+/* Light & Dark Squares (Controlled via CSS Variables for instant theme switching) */
 #chessBoard .white-1e1d7 {
   background-color: var(--square-light) !important;
   color: #2b3948 !important;
@@ -54,6 +52,11 @@ body {
   opacity: 0.85;
 }
 
+/* Toggle Hide Coordinates */
+body.hide-coords #chessBoard .notation-322f9 {
+  display: none !important;
+}
+
 /* Physical Chess Piece Drag & Appearance */
 .piece-417db {
   cursor: grab;
@@ -63,7 +66,6 @@ body {
   will-change: top, left;
 }
 
-/* When dragging: physical lift & shadow */
 .piece-417db:active {
   cursor: grabbing;
   filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.65));
@@ -98,9 +100,16 @@ body {
   z-index: 10;
 }
 
-/* On dark squares, make the dot subtly lighter */
 #chessBoard .black-3c85d.highlight-legal::after {
   background: rgba(255, 255, 255, 0.28);
+}
+
+/* Toggle Hide Legal Dots */
+body.hide-legal-dots .highlight-legal::after {
+  display: none !important;
+}
+body.hide-legal-dots .highlight-legal-capture::after {
+  display: none !important;
 }
 
 /* 3. Legal Capture (Subtle perimeter ring) */
@@ -205,8 +214,11 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* CRITICAL FIX: Ensure all tab contents display as vertical columns */
 .sidebar-tab-content {
   display: none;
+  flex-direction: column;
+  height: 100%;
 }
 
 .sidebar-tab-content.active {
@@ -282,6 +294,102 @@ body {
   background: rgba(0, 210, 255, 0.15);
   border-color: rgba(0, 210, 255, 0.4);
   color: #38bdf8;
+}
+
+/* Animation Speed Buttons */
+.anim-speed-btn {
+  padding: 5px 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  color: #94a3b8;
+  transition: all 0.12s ease;
+  text-align: center;
+}
+
+.anim-speed-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.anim-speed-btn.active {
+  background: rgba(0, 210, 255, 0.15);
+  border-color: rgba(0, 210, 255, 0.4);
+  color: #38bdf8;
+}
+
+/* Board Theme Swatches */
+.board-theme-swatch {
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.15s ease;
+}
+
+.board-theme-swatch:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.board-theme-swatch.active {
+  border-color: var(--accent-hydro);
+  background: rgba(0, 210, 255, 0.1);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.25);
+}
+
+/* ==========================================================================
+   MINIMALIST IOS / CHESS.COM TOGGLE SWITCH
+   ========================================================================== */
+
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 9999px;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #cbd5e1;
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+}
+
+input:checked + .switch-slider {
+  background-color: var(--accent-hydro);
+}
+
+input:checked + .switch-slider:before {
+  transform: translateX(16px);
+  background-color: #0b0e14;
 }
 
 /* Bottom Action Icon Buttons (Chess.com Flat Style) */

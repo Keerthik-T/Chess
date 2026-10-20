@@ -52,6 +52,12 @@
   let musicLoopInterval = null;
   let musicMeasure = 0;
 
+  // Board & Visual Preferences
+  let currentTheme = 'fontaine';
+  let animSpeedDuration = 230; // ms
+  let showLegalDots = true;
+  let showCoordinates = true;
+
   // Promotion & Highlights
   let pendingPromotion = null;
   let lastMoveSquares = { from: null, to: null };
@@ -99,6 +105,14 @@
       '"The mystical hydro resonance has fractured! The challenger vanished into thin air."',
       '"A sudden departure from the stage! The performance hangs suspended."'
     ]
+  };
+
+  // Board Themes Definitions
+  const BOARD_THEMES = {
+    fontaine: { light: '#ebecd0', dark: '#2c4d6f', name: 'Fontaine Slate' },
+    green: { light: '#ebecd0', dark: '#739552', name: 'Classic Green' },
+    obsidian: { light: '#e5e7eb', dark: '#374151', name: 'Obsidian Charcoal' },
+    ocean: { light: '#dbeafe', dark: '#1e3a8a', name: 'Royal Azure' }
   };
 
   // ==========================================================================
@@ -194,12 +208,22 @@
     chatForm: document.getElementById('chatForm'),
     chatInput: document.getElementById('chatInput'),
 
-    // Settings Tab & Audio Modal
+    // Settings Tab Controls
+    activeThemeLabel: document.getElementById('activeThemeLabel'),
+    boardThemeSwatches: document.querySelectorAll('.board-theme-swatch'),
+    animSpeedButtons: document.querySelectorAll('.anim-speed-btn'),
+    toggleLegalDots: document.getElementById('toggleLegalDots'),
+    toggleCoords: document.getElementById('toggleCoords'),
+    testSoundBtn: document.getElementById('testSoundBtn'),
     soundStyleButtons: document.querySelectorAll('.sound-style-btn'),
-    modalMusicToggleBtn: document.getElementById('modalMusicToggleBtn'),
-    musicVolumeSlider: document.getElementById('musicVolumeSlider'),
     sfxVolumeSlider: document.getElementById('sfxVolumeSlider'),
     sfxVolumeLabel: document.getElementById('sfxVolumeLabel'),
+    modalMusicToggleBtn: document.getElementById('modalMusicToggleBtn'),
+    musicVolumeSlider: document.getElementById('musicVolumeSlider'),
+    musicVolumeLabel: document.getElementById('musicVolumeLabel'),
+    settingsPeerIdInput: document.getElementById('settingsPeerIdInput'),
+    settingsCopyPeerIdBtn: document.getElementById('settingsCopyPeerIdBtn'),
+    resetSettingsBtn: document.getElementById('resetSettingsBtn'),
 
     // Bottom Action Bar
     takebackBtn: document.getElementById('takebackBtn'),
@@ -231,10 +255,6 @@
     qrModal: document.getElementById('qrModal'),
     qrImage: document.getElementById('qrImage'),
     closeQrModalBtn: document.getElementById('closeQrModalBtn'),
-
-    soundSettingsModal: document.getElementById('soundSettingsModal'),
-    closeSoundSettingsBtn: document.getElementById('closeSoundSettingsBtn'),
-    dismissSoundSettingsBtn: document.getElementById('dismissSoundSettingsBtn'),
 
     helpModal: document.getElementById('helpModal'),
     closeHelpModalBtn: document.getElementById('closeHelpModalBtn'),
@@ -685,21 +705,20 @@
   }
 
   // ==========================================================================
-  // 6. CHESS ENGINE & PHYSICAL PIECE MOVEMENT CONFIGURATION
+  // 6. CHESS ENGINE & PHYSICAL PIECE MOVEMENT
   // ==========================================================================
 
   function initChess() {
     game = new Chess();
 
-    // Configure Chessboard with smooth physical slide speed & physics
     const config = {
       draggable: true,
       position: 'start',
       orientation: myColor === 'w' ? 'white' : 'black',
       pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-      moveSpeed: 230,      // Physical sliding glide duration (ms)
-      snapbackSpeed: 150,  // Physical bounce back on illegal move (ms)
-      snapSpeed: 70,       // Crisp square centering on drop (ms)
+      moveSpeed: animSpeedDuration,
+      snapbackSpeed: 150,
+      snapSpeed: 70,
       onDragStart: handleDragStart,
       onDrop: handleDrop,
       onSnapEnd: handleSnapEnd
@@ -707,7 +726,6 @@
 
     board = Chessboard('chessBoard', config);
 
-    // Auto resize board on window resize
     window.addEventListener('resize', () => {
       if (board) {
         board.resize();
@@ -774,7 +792,6 @@
   }
 
   function handleSnapEnd() {
-    // Snap piece physically to square center
     board.position(game.fen(), false);
     reapplyLastMoveHighlights();
 
@@ -848,6 +865,8 @@
   function highlightLegalMoves(source) {
     removeSquareHighlights();
     $('#chessBoard .square-' + source).addClass('highlight-selected');
+
+    if (!showLegalDots) return;
 
     const moves = game.moves({ square: source, verbose: true });
     if (moves.length === 0) return;
@@ -924,7 +943,6 @@
 
     const move = game.move({ from: source, to: target, promotion: pieceType });
     if (move) {
-      // Physical move animation
       board.position(game.fen(), true);
       onMoveExecuted(move);
       broadcastMove(move);
@@ -963,7 +981,6 @@
     const undone = game.undo();
     if (!undone) return;
 
-    // Physical slide back to previous state!
     board.position(game.fen(), true);
 
     const hist = game.history({ verbose: true });
@@ -1204,7 +1221,7 @@
   }
 
   // ==========================================================================
-  // 13. WEBRTC & DATA HANDLING (PHYSICAL PIECE ANIMATION ON RECEIVE)
+  // 13. WEBRTC & DATA HANDLING
   // ==========================================================================
 
   function sendWebRTC(data) {
@@ -1230,7 +1247,6 @@
         }
         if (data.fen && data.fen !== game.fen()) {
           game.load(data.fen);
-          // Physical animation to initial position
           board.position(data.fen, true);
         }
         break;
@@ -1248,7 +1264,6 @@
         });
 
         if (move) {
-          // CRITICAL: board.position(game.fen(), true) executes physical piece slide!
           board.position(game.fen(), true);
           onMoveExecuted(move);
         } else if (data.fen) {
@@ -1353,6 +1368,9 @@
       dom.shareLinkInput.value = shareUrl;
       dom.qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareUrl)}`;
 
+      // Update Settings Peer ID field
+      dom.settingsPeerIdInput.value = id;
+
       updateConnectionPill('waiting', 'Awaiting Opponent');
       setFurinaQuote('welcome');
       showToast('Game created! Share invite link.', 'success');
@@ -1399,6 +1417,7 @@
 
     peer.on('open', (myId) => {
       myPeerId = myId;
+      dom.settingsPeerIdInput.value = myId;
       const conn = peer.connect(hostPeerId, { reliable: true });
       setupConnection(conn);
     });
@@ -1420,7 +1439,6 @@
       updateConnectionPill('connected', 'Live (P2P)');
       resetClocks();
 
-      // Switch to Moves tab automatically when game begins
       switchSidebarTab('tab-moves');
 
       if (isHost) {
@@ -1653,7 +1671,6 @@
     }
 
     board.orientation(myColor === 'w' ? 'white' : 'black');
-    // Physical piece movement to start positions
     board.position('start', true);
 
     isGameOver = false;
@@ -1678,7 +1695,7 @@
   }
 
   // ==========================================================================
-  // 16. TAB NAVIGATION & MODE SWITCHER
+  // 16. TAB NAVIGATION, MODE SWITCHER & SETTINGS LOGIC
   // ==========================================================================
 
   function switchSidebarTab(targetTabId) {
@@ -1697,6 +1714,12 @@
         content.classList.remove('active');
       }
     });
+
+    // On mobile screens, scroll down to the sidebar if opened from header
+    if (window.innerWidth < 1024) {
+      const el = document.getElementById(targetTabId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   function switchGameMode(mode) {
@@ -1722,6 +1745,47 @@
     }
   }
 
+  function setBoardTheme(themeKey) {
+    const theme = BOARD_THEMES[themeKey] || BOARD_THEMES.fontaine;
+    currentTheme = themeKey;
+
+    document.documentElement.style.setProperty('--square-light', theme.light);
+    document.documentElement.style.setProperty('--square-dark', theme.dark);
+
+    dom.activeThemeLabel.textContent = theme.name;
+
+    dom.boardThemeSwatches.forEach(swatch => {
+      if (swatch.getAttribute('data-theme') === themeKey) {
+        swatch.classList.add('active');
+      } else {
+        swatch.classList.remove('active');
+      }
+    });
+
+    showToast(`Board theme changed to: ${theme.name}`, 'info');
+  }
+
+  function setAnimationSpeed(speedKey) {
+    dom.animSpeedButtons.forEach(btn => {
+      if (btn.getAttribute('data-speed') === speedKey) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    if (speedKey === 'fast') animSpeedDuration = 140;
+    else if (speedKey === 'slow') animSpeedDuration = 380;
+    else animSpeedDuration = 230;
+
+    // Update chessboard move speed dynamically if initialized
+    if (board && board.config) {
+      board.config.moveSpeed = animSpeedDuration;
+    }
+
+    showToast(`Animation speed set to: ${speedKey.toUpperCase()}`, 'info');
+  }
+
   // ==========================================================================
   // 17. EVENT BINDINGS & APP INITIALIZATION
   // ==========================================================================
@@ -1733,6 +1797,11 @@
         const targetTab = e.currentTarget.getAttribute('data-tab');
         switchSidebarTab(targetTab);
       });
+    });
+
+    // Top Header Settings Button -> Switches to Settings Tab
+    dom.soundSettingsBtn.addEventListener('click', () => {
+      switchSidebarTab('tab-settings');
     });
 
     // Mode Switcher Buttons
@@ -1917,14 +1986,41 @@
       });
     });
 
-    // Music & Sounds
-    dom.bgMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
-    dom.modalMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
+    // ========================================================================
+    // SETTINGS TAB EVENT HANDLERS
+    // ========================================================================
 
-    dom.soundSettingsBtn.addEventListener('click', () => {
-      switchSidebarTab('tab-settings');
+    // 1. Board Themes
+    dom.boardThemeSwatches.forEach(swatch => {
+      swatch.addEventListener('click', (e) => {
+        const theme = e.currentTarget.getAttribute('data-theme');
+        setBoardTheme(theme);
+      });
     });
 
+    // 2. Animation Speed
+    dom.animSpeedButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const speed = e.currentTarget.getAttribute('data-speed');
+        setAnimationSpeed(speed);
+      });
+    });
+
+    // 3. Legal Move Dots Toggle
+    dom.toggleLegalDots.addEventListener('change', (e) => {
+      showLegalDots = e.target.checked;
+      document.body.classList.toggle('hide-legal-dots', !showLegalDots);
+      showToast(`Legal move dots: ${showLegalDots ? 'Visible' : 'Hidden'}`, 'info');
+    });
+
+    // 4. Coordinates Toggle
+    dom.toggleCoords.addEventListener('change', (e) => {
+      showCoordinates = e.target.checked;
+      document.body.classList.toggle('hide-coords', !showCoordinates);
+      showToast(`Board coordinates: ${showCoordinates ? 'Visible' : 'Hidden'}`, 'info');
+    });
+
+    // 5. Sound Style Buttons
     dom.soundStyleButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
         dom.soundStyleButtons.forEach(b => b.classList.remove('active'));
@@ -1935,6 +2031,13 @@
       });
     });
 
+    // 6. Test Sound Button
+    dom.testSoundBtn.addEventListener('click', () => {
+      playSound('move');
+      setTimeout(() => playSound('check'), 180);
+    });
+
+    // 7. Sliders (Volume)
     dom.sfxVolumeSlider.addEventListener('input', (e) => {
       soundVolume = parseInt(e.target.value, 10) / 100;
       dom.sfxVolumeLabel.textContent = `${e.target.value}%`;
@@ -1942,6 +2045,52 @@
 
     dom.musicVolumeSlider.addEventListener('input', (e) => {
       musicVolume = parseInt(e.target.value, 10) / 100;
+      dom.musicVolumeLabel.textContent = `${e.target.value}%`;
+    });
+
+    // 8. Music Toggles
+    dom.bgMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
+    dom.modalMusicToggleBtn.addEventListener('click', () => toggleBackgroundMusic());
+
+    // 9. Copy Peer ID from Settings
+    dom.settingsCopyPeerIdBtn.addEventListener('click', () => {
+      const peerId = dom.settingsPeerIdInput.value;
+      if (!peerId || peerId.startsWith('Not')) {
+        showToast('Initialize game first to generate Peer ID.', 'warning');
+        return;
+      }
+      navigator.clipboard.writeText(peerId).then(() => {
+        showToast('Peer ID copied to clipboard!', 'success');
+        playSound('droplet');
+      });
+    });
+
+    // 10. Reset Preferences Button
+    dom.resetSettingsBtn.addEventListener('click', () => {
+      setBoardTheme('fontaine');
+      setAnimationSpeed('normal');
+      showLegalDots = true;
+      dom.toggleLegalDots.checked = true;
+      document.body.classList.remove('hide-legal-dots');
+
+      showCoordinates = true;
+      dom.toggleCoords.checked = true;
+      document.body.classList.remove('hide-coords');
+
+      soundVolume = 0.8;
+      dom.sfxVolumeSlider.value = 80;
+      dom.sfxVolumeLabel.textContent = '80%';
+
+      musicVolume = 0.4;
+      dom.musicVolumeSlider.value = 40;
+      dom.musicVolumeLabel.textContent = '40%';
+
+      soundStyle = 'opera';
+      dom.soundStyleButtons.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-style') === 'opera');
+      });
+
+      showToast('Settings reset to defaults.', 'info');
     });
 
     // Protocol Help Modal

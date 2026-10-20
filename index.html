@@ -88,9 +88,10 @@
         <span class="hidden md:inline text-[11px]" id="bgMusicLabel">Waltz</span>
       </button>
 
-      <!-- Sound Settings Toggle -->
-      <button id="soundSettingsBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-gold-400 text-xs font-medium transition flex items-center gap-1.5" title="Audio Settings">
-        <i id="soundIcon" class="fa-solid fa-volume-high text-xs"></i>
+      <!-- Sound Settings Toggle (Directly opens Settings Tab) -->
+      <button id="soundSettingsBtn" class="px-2.5 py-1 rounded-md bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-gold-400 text-xs font-medium transition flex items-center gap-1.5" title="Settings & Customization">
+        <i id="soundIcon" class="fa-solid fa-gear text-xs"></i>
+        <span class="hidden md:inline text-[11px]">Settings</span>
       </button>
 
       <!-- Protocol / Help Info Modal -->
@@ -185,7 +186,7 @@
     <aside class="w-full lg:w-80 xl:w-96 flex flex-col h-[520px] lg:h-[min(84vh+50px,850px)] bg-surface-900 border border-white/[0.06] rounded-xl overflow-hidden shrink-0">
       
       <!-- Minimalist Navigation Tabs (Play / Moves / Chat / Settings) -->
-      <div class="flex items-center border-b border-white/[0.06] bg-surface-950/60 p-1 gap-1 text-xs select-none">
+      <div class="flex items-center border-b border-white/[0.06] bg-surface-950/60 p-1 gap-1 text-xs select-none shrink-0">
         <button class="sidebar-tab-btn active" data-tab="tab-play">
           <i class="fa-solid fa-play text-[11px] mr-1 text-hydro-400"></i>
           <span>Play</span>
@@ -347,7 +348,7 @@
 
       <!-- TAB 2: MOVES NOTATION LOG (Chess.com Clean 2-Column Table) -->
       <div id="tab-moves" class="sidebar-tab-content flex-1 flex flex-col p-2 overflow-hidden">
-        <div class="flex items-center justify-between px-2 py-1.5 border-b border-white/[0.06] text-[11px] text-slate-400 font-semibold uppercase">
+        <div class="flex items-center justify-between px-2 py-1.5 border-b border-white/[0.06] text-[11px] text-slate-400 font-semibold uppercase shrink-0">
           <span class="w-8">#</span>
           <span class="flex-1">White</span>
           <span class="flex-1">Black</span>
@@ -386,40 +387,164 @@
         </form>
       </div>
 
-      <!-- TAB 4: SETTINGS & AUDIO -->
-      <div id="tab-settings" class="sidebar-tab-content flex-1 p-3.5 space-y-4 overflow-y-auto custom-scrollbar text-xs">
-        <div>
-          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Move Sound Theme</label>
-          <div class="grid grid-cols-3 gap-1.5">
+      <!-- TAB 4: COMPREHENSIVE SETTINGS & CUSTOMIZATION (CHESS.COM STYLE) -->
+      <div id="tab-settings" class="sidebar-tab-content flex-1 p-3.5 space-y-4 overflow-y-auto custom-scrollbar text-xs flex flex-col">
+        
+        <!-- Settings Header & Reset Button -->
+        <div class="flex items-center justify-between pb-2 border-b border-white/[0.06] shrink-0">
+          <span class="font-bold text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders text-hydro-400"></i> Preferences & Audio
+          </span>
+          <button id="resetSettingsBtn" class="text-[10px] text-slate-400 hover:text-slate-200 transition">
+            Reset Defaults
+          </button>
+        </div>
+
+        <!-- SECTION 1: 🎨 BOARD THEME -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-semibold text-slate-300">Board Theme</label>
+            <span id="activeThemeLabel" class="text-[10px] text-hydro-400 font-mono">Fontaine</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5">
+            <!-- Fontaine Slate (Default) -->
+            <button class="board-theme-swatch active" data-theme="fontaine" title="Fontaine Slate">
+              <div class="w-full h-7 rounded flex overflow-hidden border border-white/10 mb-1">
+                <div class="w-1/2 h-full bg-[#ebecd0]"></div>
+                <div class="w-1/2 h-full bg-[#2c4d6f]"></div>
+              </div>
+              <span class="text-[9.5px] block text-center truncate">Fontaine</span>
+            </button>
+
+            <!-- Classic Green (Chess.com) -->
+            <button class="board-theme-swatch" data-theme="green" title="Classic Green">
+              <div class="w-full h-7 rounded flex overflow-hidden border border-white/10 mb-1">
+                <div class="w-1/2 h-full bg-[#ebecd0]"></div>
+                <div class="w-1/2 h-full bg-[#739552]"></div>
+              </div>
+              <span class="text-[9.5px] block text-center truncate">Classic</span>
+            </button>
+
+            <!-- Obsidian Charcoal -->
+            <button class="board-theme-swatch" data-theme="obsidian" title="Obsidian Dark">
+              <div class="w-full h-7 rounded flex overflow-hidden border border-white/10 mb-1">
+                <div class="w-1/2 h-full bg-[#e5e7eb]"></div>
+                <div class="w-1/2 h-full bg-[#374151]"></div>
+              </div>
+              <span class="text-[9.5px] block text-center truncate">Obsidian</span>
+            </button>
+
+            <!-- Royal Cyan / Ice -->
+            <button class="board-theme-swatch" data-theme="ocean" title="Royal Azure">
+              <div class="w-full h-7 rounded flex overflow-hidden border border-white/10 mb-1">
+                <div class="w-1/2 h-full bg-[#dbeafe]"></div>
+                <div class="w-1/2 h-full bg-[#1e3a8a]"></div>
+              </div>
+              <span class="text-[9.5px] block text-center truncate">Azure</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SECTION 2: ♟️ PIECE ANIMATION SPEED -->
+        <div class="space-y-1.5 pt-2 border-t border-white/[0.06]">
+          <label class="text-[11px] font-semibold text-slate-300 block">Piece Animation Speed</label>
+          <div class="grid grid-cols-3 gap-1">
+            <button class="anim-speed-btn" data-speed="fast">Fast (140ms)</button>
+            <button class="anim-speed-btn active" data-speed="normal">Normal (230ms)</button>
+            <button class="anim-speed-btn" data-speed="slow">Slow (380ms)</button>
+          </div>
+        </div>
+
+        <!-- SECTION 3: 👁️ VISUAL DISPLAY TOGGLES -->
+        <div class="space-y-2.5 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-300">Legal Move Dots</div>
+              <div class="text-[10px] text-slate-500">Show destination dots on selected piece</div>
+            </div>
+            <label class="switch-toggle">
+              <input id="toggleLegalDots" type="checkbox" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-300">Board Coordinates</div>
+              <div class="text-[10px] text-slate-500">Show ranks (1-8) & files (a-h)</div>
+            </div>
+            <label class="switch-toggle">
+              <input id="toggleCoords" type="checkbox" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- SECTION 4: 🔊 MOVE SOUNDS -->
+        <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-semibold text-slate-300">Move Sound Style</label>
+            <button id="testSoundBtn" class="text-[10px] text-hydro-400 hover:text-hydro-300 flex items-center gap-1 font-mono transition">
+              <i class="fa-solid fa-play text-[8px]"></i> Test Sound
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-1">
             <button class="sound-style-btn active" data-style="opera">Opera</button>
             <button class="sound-style-btn" data-style="arcade">8-Bit</button>
             <button class="sound-style-btn" data-style="modern">Minimal</button>
           </div>
+
+          <div class="space-y-1 pt-1">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">SFX Volume:</span>
+              <span id="sfxVolumeLabel" class="text-gold-400 font-mono font-bold text-[10px]">80%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
+              <input id="sfxVolumeSlider" type="range" min="0" max="100" value="80" class="w-full accent-gold-400 cursor-pointer h-1.5 bg-surface-950 rounded-lg">
+              <i class="fa-solid fa-volume-high text-gold-400 text-[10px]"></i>
+            </div>
+          </div>
         </div>
 
+        <!-- SECTION 5: 🎵 FONTAINE WALTZ BACKGROUND MUSIC -->
         <div class="space-y-2 pt-2 border-t border-white/[0.06]">
           <div class="flex items-center justify-between">
-            <span class="text-slate-300">Waltz Background Music:</span>
-            <button id="modalMusicToggleBtn" class="px-2 py-0.5 rounded bg-surface-800 text-hydro-400 text-[11px] font-bold">Play</button>
+            <div>
+              <div class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-music text-hydro-400"></i> Fontaine Waltz Music
+              </div>
+              <div class="text-[10px] text-slate-500">Procedural 3/4 classical synth</div>
+            </div>
+            <button id="modalMusicToggleBtn" class="px-2.5 py-1 rounded bg-surface-800 hover:bg-surface-700 text-hydro-400 text-[11px] font-bold border border-hydro-500/30 transition">
+              Play
+            </button>
           </div>
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
-            <input id="musicVolumeSlider" type="range" min="0" max="100" value="40" class="w-full accent-hydro-400 cursor-pointer">
-            <i class="fa-solid fa-volume-high text-hydro-400 text-[10px]"></i>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400">Music Volume:</span>
+              <span id="musicVolumeLabel" class="text-hydro-400 font-mono font-bold text-[10px]">40%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
+              <input id="musicVolumeSlider" type="range" min="0" max="100" value="40" class="w-full accent-hydro-400 cursor-pointer h-1.5 bg-surface-950 rounded-lg">
+              <i class="fa-solid fa-volume-high text-hydro-400 text-[10px]"></i>
+            </div>
           </div>
         </div>
 
-        <div class="space-y-2 pt-2 border-t border-white/[0.06]">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-300">Sound Effects Volume:</span>
-            <span id="sfxVolumeLabel" class="text-slate-500 text-[10px] font-mono">80%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-volume-low text-slate-500 text-[10px]"></i>
-            <input id="sfxVolumeSlider" type="range" min="0" max="100" value="80" class="w-full accent-gold-400 cursor-pointer">
-            <i class="fa-solid fa-volume-high text-gold-400 text-[10px]"></i>
+        <!-- SECTION 6: 🌐 PEERJS IDENTITY -->
+        <div class="space-y-1.5 pt-2 border-t border-white/[0.06] pb-2">
+          <label class="text-[11px] font-semibold text-slate-300 block">Your PeerJS Identity</label>
+          <div class="flex items-center gap-1.5">
+            <input id="settingsPeerIdInput" type="text" readonly value="Not connected" class="w-full bg-surface-950 border border-white/10 rounded px-2 py-1 text-[11px] font-mono text-slate-400 select-all">
+            <button id="settingsCopyPeerIdBtn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-slate-300 text-[11px] shrink-0 transition" title="Copy Peer ID">
+              <i class="fa-solid fa-copy"></i>
+            </button>
           </div>
         </div>
+
       </div>
 
       <!-- BOTTOM CONTROL BAR: Sleek Flat Action Icons (Takeback / Draw / Resign / Flip) -->
@@ -530,22 +655,6 @@
       <p class="text-xs text-slate-400 mb-3">Scan with a phone to join the duel instantly.</p>
       <div class="bg-white p-2 rounded-lg inline-block">
         <img id="qrImage" src="" alt="Room QR Code" class="w-44 h-44 mx-auto">
-      </div>
-    </div>
-  </div>
-
-  <!-- Audio Settings Modal -->
-  <div id="soundSettingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-white/10 max-w-sm w-full p-5 rounded-xl shadow-2xl space-y-4 animate-scale-up relative">
-      <button id="closeSoundSettingsBtn" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1">
-        <i class="fa-solid fa-xmark text-sm"></i>
-      </button>
-      <h3 class="font-bold text-sm text-slate-100">Sound Settings</h3>
-      <p class="text-xs text-slate-400">Configure theme audio and move sounds.</p>
-      <div class="text-center pt-2">
-        <button id="dismissSoundSettingsBtn" class="px-4 py-1.5 rounded-lg bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-xs transition">
-          Done
-        </button>
       </div>
     </div>
   </div>
