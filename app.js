@@ -12,7 +12,7 @@
   // 1. CONFIGURATION & STATE
   // ==========================================================================
 
-  // Robust STUN servers for WebRTC connection across firewalls and NATs
+  // Robust STUN & TURN servers for WebRTC connection across firewalls, symmetric NATs and mobile networks
   const PEER_CONFIG = {
     debug: 1,
     config: {
@@ -22,7 +22,23 @@
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:relay.metered.ca:80' },
+        {
+          urls: 'turn:global.relay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:global.relay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
       ],
       iceCandidatePoolSize: 10
     }
@@ -35,6 +51,8 @@
   let broadcastChan = null;  // BroadcastChannel for offline dual window
   let bluetoothDevice = null;// Web Bluetooth peripheral device
   let heartbeatInterval = null;
+  let connectionTimeout = null;
+  let connectionWatchdog = null;
 
   let myPeerId = null;
   let targetPeerId = null;
@@ -194,7 +212,11 @@
     manualJoinInput: document.getElementById('manualJoinInput'),
     manualJoinBtn: document.getElementById('manualJoinBtn'),
     autoJoinState: document.getElementById('autoJoinState'),
+    autoJoinSpinner: document.getElementById('autoJoinSpinner'),
+    autoJoinStatusTitle: document.getElementById('autoJoinStatusTitle'),
     autoJoinHostText: document.getElementById('autoJoinHostText'),
+    autoJoinDiagnosticMsg: document.getElementById('autoJoinDiagnosticMsg'),
+    retryJoinBtn: document.getElementById('retryJoinBtn'),
     cancelJoinBtn: document.getElementById('cancelJoinBtn'),
 
     autoFlipToggle: document.getElementById('autoFlipToggle'),
@@ -335,7 +357,7 @@
   }
 
   // ==========================================================================
-  // 4. WEBRTC ENGINE (PEERJS WITH STUN & HEARTBEAT)
+  // 4. WEBRTC ENGINE (PEERJS WITH STUN, TURN RELAY & WATCHDOG)
   // ==========================================================================
 
   function sendWebRTC(data) {
@@ -364,14 +386,50 @@
     }
   }
 
+  function clearConnectionTimers() {
+    if (connectionTimeout) {
+      clearTimeout(connectionTimeout);
+      connectionTimeout = null;
+    }
+    if (connectionWatchdog) {
+      clearTimeout(connectionWatchdog);
+      connectionWatchdog = null;
+    }
+  }
+
   function setupConnection(conn) {
     if (!conn) return;
     connection = conn;
+
+    // Attach WebRTC PeerConnection ICE diagnostics if accessible
+    try {
+      const pc = conn.peerConnection || conn._peerConnection;
+      if (pc) {
+        pc.addEventListener('iceconnectionstatechange', () => {
+          const state = pc.iceConnectionState;
+          console.log('RTCPeerConnection ICE state:', state);
+          if (state === 'checking') {
+            updateConnectionPill('connecting', 'P2P Handshake...');
+          } else if (state === 'connected' || state === 'completed') {
+            if (!isConnected) onOpen();
+          } else if (state === 'failed') {
+            console.warn('ICE connection failed, triggering restart...');
+            if (typeof pc.restartIce === 'function') {
+              pc.restartIce();
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('ICE listener setup notice:', e);
+    }
 
     let hasOpened = false;
     function onOpen() {
       if (hasOpened) return;
       hasOpened = true;
+
+      clearConnectionTimers();
 
       console.log('WebRTC connection ready with peer:', conn.peer);
       isConnected = true;
@@ -386,6 +444,9 @@
       // Update status text
       if (dom.hostStatusMsgText) {
         dom.hostStatusMsgText.textContent = 'Opponent connected! Duel in progress.';
+      }
+      if (dom.autoJoinDiagnosticMsg) {
+        dom.autoJoinDiagnosticMsg.classList.add('hidden');
       }
 
       // Host initiates synchronization
@@ -432,6 +493,7 @@
 
     conn.on('close', () => {
       console.log('Connection closed with peer:', conn.peer);
+      clearConnectionTimers();
       isConnected = false;
       stopClock();
       stopHeartbeat();
@@ -445,6 +507,7 @@
 
     conn.on('error', (err) => {
       console.error('DataConnection error:', err);
+      clearConnectionTimers();
       showToast(`Connection error: ${err.message || err}`, 'error');
     });
   }
@@ -454,6 +517,7 @@
     myColor = 'w';
     opponentColor = 'b';
     board.orientation('white');
+    clearConnectionTimers();
 
     if (peer && !peer.destroyed && !regenerate) {
       return;
@@ -465,7 +529,12 @@
       peer.destroy();
     }
 
-    peer = new Peer(PEER_CONFIG);
+    try {
+      peer = new Peer(PEER_CONFIG);
+    } catch (e) {
+      console.error('Failed to create Peer with custom config, falling back to default:', e);
+      peer = new Peer();
+    }
 
     peer.on('open', (id) => {
       myPeerId = id;
@@ -498,6 +567,13 @@
       setupConnection(incomingConn);
     });
 
+    peer.on('disconnected', () => {
+      console.warn('Host disconnected from signaling server. Reconnecting...');
+      if (peer && !peer.destroyed) {
+        peer.reconnect();
+      }
+    });
+
     peer.on('error', (err) => {
       console.error('Host Peer Error:', err);
       updateConnectionPill('disconnected', 'Signal Error');
@@ -511,6 +587,8 @@
       showToast('Invalid host connection ID.', 'error');
       return;
     }
+
+    clearConnectionTimers();
 
     isHost = false;
     myColor = 'b';
@@ -530,34 +608,93 @@
     dom.joinDefaultContent.classList.add('hidden');
     dom.autoJoinState.classList.remove('hidden');
     dom.autoJoinHostText.textContent = `Host ID: ${cleanHostId.substring(0, 16)}...`;
+    if (dom.autoJoinDiagnosticMsg) {
+      dom.autoJoinDiagnosticMsg.classList.add('hidden');
+      dom.autoJoinDiagnosticMsg.textContent = '';
+    }
+    if (dom.autoJoinStatusTitle) {
+      dom.autoJoinStatusTitle.textContent = 'Connecting to Host Stage...';
+    }
 
     updateConnectionPill('connecting', 'Connecting...');
     showToast(`Connecting to Host Stage...`, 'info');
+
+    // Connection watchdog at 5 seconds and timeout at 12 seconds
+    connectionWatchdog = setTimeout(() => {
+      if (!isConnected) {
+        updateConnectionPill('connecting', 'Negotiating route...');
+        if (dom.autoJoinDiagnosticMsg) {
+          dom.autoJoinDiagnosticMsg.textContent = 'Traversing NAT / firewall... attempting TURN relay connection.';
+          dom.autoJoinDiagnosticMsg.classList.remove('hidden');
+        }
+      }
+    }, 5000);
+
+    connectionTimeout = setTimeout(() => {
+      if (!isConnected) {
+        updateConnectionPill('disconnected', 'Connection Stalled');
+        if (dom.autoJoinDiagnosticMsg) {
+          dom.autoJoinDiagnosticMsg.textContent = 'Connection taking longer than usual. Ensure the host has this page open and their screen is active.';
+          dom.autoJoinDiagnosticMsg.classList.remove('hidden');
+        }
+        if (dom.autoJoinStatusTitle) {
+          dom.autoJoinStatusTitle.textContent = 'Connection Stalled';
+        }
+        showToast('Connection stalled. Tap Retry or check with Host.', 'warning');
+      }
+    }, 12000);
 
     if (peer && !peer.destroyed) {
       peer.destroy();
     }
 
-    peer = new Peer(PEER_CONFIG);
+    try {
+      peer = new Peer(PEER_CONFIG);
+    } catch (e) {
+      console.error('Failed to create Peer with custom config, falling back to default:', e);
+      peer = new Peer();
+    }
 
     peer.on('open', (myId) => {
       myPeerId = myId;
       dom.settingsPeerIdInput.value = myId;
       console.log('Joiner PeerJS ready with ID:', myId, 'Connecting to host:', cleanHostId);
 
+      if (dom.autoJoinStatusTitle) {
+        dom.autoJoinStatusTitle.textContent = 'Host Contacted! Opening channel...';
+      }
+
       const conn = peer.connect(cleanHostId, {
-        reliable: true,
-        serialization: 'json'
+        reliable: true
       });
       setupConnection(conn);
     });
 
+    peer.on('disconnected', () => {
+      console.warn('Joiner disconnected from signaling server. Reconnecting...');
+      if (peer && !peer.destroyed) {
+        peer.reconnect();
+      }
+    });
+
     peer.on('error', (err) => {
+      clearConnectionTimers();
       console.error('Joiner Peer Error:', err);
       updateConnectionPill('disconnected', 'Connection Failed');
+      if (dom.autoJoinStatusTitle) {
+        dom.autoJoinStatusTitle.textContent = 'Connection Failed';
+      }
       if (err.type === 'peer-unavailable') {
-        showToast('Host not found. The host game may have closed or the link expired.', 'error');
+        if (dom.autoJoinDiagnosticMsg) {
+          dom.autoJoinDiagnosticMsg.textContent = 'Host not found. The host may have refreshed their page or the invite link expired.';
+          dom.autoJoinDiagnosticMsg.classList.remove('hidden');
+        }
+        showToast('Host not found. Ask Host for their newest invite link.', 'error');
       } else {
+        if (dom.autoJoinDiagnosticMsg) {
+          dom.autoJoinDiagnosticMsg.textContent = `Signaling error (${err.type || err.message}). Tap Retry to reconnect.`;
+          dom.autoJoinDiagnosticMsg.classList.remove('hidden');
+        }
         showToast(`Connection error: ${err.type || err.message}`, 'error');
       }
     });
@@ -1925,6 +2062,25 @@
 
     dom.cancelJoinBtn.addEventListener('click', () => {
       window.location.href = window.location.origin + window.location.pathname;
+    });
+
+    if (dom.retryJoinBtn) {
+      dom.retryJoinBtn.addEventListener('click', () => {
+        if (targetPeerId) {
+          showToast('Retrying connection...', 'info');
+          initJoiner(targetPeerId);
+        }
+      });
+    }
+
+    // Automatically recover signaling if tab goes to background and comes back
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (peer && peer.disconnected && !peer.destroyed) {
+          console.log('Page visible again; reconnecting peer to signaling server...');
+          peer.reconnect();
+        }
+      }
     });
 
     dom.showQrBtn.addEventListener('click', () => {

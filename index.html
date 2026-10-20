@@ -274,6 +274,7 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                 <span id="hostStatusMsgText">Waiting for opponent to open link...</span>
               </p>
+              <p class="text-[10px] text-slate-500 italic">Tip: Keep this tab open. If refreshed, a new link will be generated.</p>
             </div>
 
             <!-- Join manual input -->
@@ -290,11 +291,16 @@
             <!-- Auto-Join status indicator when ?join= is in URL -->
             <div id="autoJoinState" class="hidden p-2.5 rounded-lg bg-hydro-500/10 border border-hydro-500/30 text-xs space-y-1.5">
               <div class="flex items-center gap-2 text-hydro-300 font-bold">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                <span>Connecting to Host Stage...</span>
+                <i id="autoJoinSpinner" class="fa-solid fa-spinner fa-spin"></i>
+                <span id="autoJoinStatusTitle">Connecting to Host Stage...</span>
               </div>
               <div id="autoJoinHostText" class="text-[10px] text-slate-400 font-mono"></div>
+              <div id="autoJoinDiagnosticMsg" class="hidden text-[10.5px] text-amber-300/90 leading-tight bg-amber-500/10 border border-amber-500/20 p-2 rounded"></div>
               <div class="flex items-center gap-2 pt-1">
+                <button id="retryJoinBtn" class="px-2.5 py-1 rounded bg-hydro-500 hover:bg-hydro-400 text-surface-950 font-bold text-[11px] transition flex items-center gap-1">
+                  <i class="fa-solid fa-rotate-right"></i>
+                  <span>Retry</span>
+                </button>
                 <button id="cancelJoinBtn" class="text-[10px] text-rose-400 hover:underline">
                   Host your own game instead
                 </button>
