@@ -12,9 +12,10 @@
   // 1. CONFIGURATION & STATE
   // ==========================================================================
 
-  // Robust STUN & TURN servers for WebRTC connection across firewalls, symmetric NATs and mobile networks
+  // High-reliability global STUN servers (Google + Cloudflare) with 5-second signaling keepalive
   const PEER_CONFIG = {
     debug: 1,
+    pingInterval: 5000,
     config: {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -22,23 +23,7 @@
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' },
-        { urls: 'stun:relay.metered.ca:80' },
-        {
-          urls: 'turn:global.relay.metered.ca:80',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:global.relay.metered.ca:443',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        },
-        {
-          urls: 'turn:global.relay.metered.ca:443?transport=tcp',
-          username: 'openrelayproject',
-          credential: 'openrelayproject'
-        }
+        { urls: 'stun:stun.cloudflare.com:3478' }
       ],
       iceCandidatePoolSize: 10
     }
@@ -399,36 +384,22 @@
 
   function setupConnection(conn) {
     if (!conn) return;
+    if (connection && connection !== conn) {
+      try { connection.close(); } catch (e) {}
+    }
     connection = conn;
 
-    // Attach WebRTC PeerConnection ICE diagnostics if accessible
-    try {
-      const pc = conn.peerConnection || conn._peerConnection;
-      if (pc) {
-        pc.addEventListener('iceconnectionstatechange', () => {
-          const state = pc.iceConnectionState;
-          console.log('RTCPeerConnection ICE state:', state);
-          if (state === 'checking') {
-            updateConnectionPill('connecting', 'P2P Handshake...');
-          } else if (state === 'connected' || state === 'completed') {
-            if (!isConnected) onOpen();
-          } else if (state === 'failed') {
-            console.warn('ICE connection failed, triggering restart...');
-            if (typeof pc.restartIce === 'function') {
-              pc.restartIce();
-            }
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('ICE listener setup notice:', e);
-    }
-
     let hasOpened = false;
+    let fallbackCheck = null;
+
     function onOpen() {
       if (hasOpened) return;
       hasOpened = true;
 
+      if (fallbackCheck) {
+        clearInterval(fallbackCheck);
+        fallbackCheck = null;
+      }
       clearConnectionTimers();
 
       console.log('WebRTC connection ready with peer:', conn.peer);
@@ -473,12 +444,27 @@
       startHeartbeat();
     }
 
-    // CRITICAL: Handle if connection is already open OR await event
-    if (conn.open) {
+    // 1. Direct open check
+    if (conn.open || (conn.dataChannel && conn.dataChannel.readyState === 'open')) {
       onOpen();
     } else {
       conn.on('open', onOpen);
+      if (conn.dataChannel) {
+        conn.dataChannel.addEventListener('open', onOpen);
+      }
     }
+
+    // 2. Continuous fallback poller to eliminate any missed onopen event
+    fallbackCheck = setInterval(() => {
+      if (hasOpened) {
+        clearInterval(fallbackCheck);
+        return;
+      }
+      if (conn.open || (conn.dataChannel && conn.dataChannel.readyState === 'open')) {
+        clearInterval(fallbackCheck);
+        onOpen();
+      }
+    }, 250);
 
     conn.on('data', (data) => {
       if (data && data.type === 'ping') {
@@ -493,6 +479,7 @@
 
     conn.on('close', () => {
       console.log('Connection closed with peer:', conn.peer);
+      if (fallbackCheck) clearInterval(fallbackCheck);
       clearConnectionTimers();
       isConnected = false;
       stopClock();
@@ -507,6 +494,7 @@
 
     conn.on('error', (err) => {
       console.error('DataConnection error:', err);
+      if (fallbackCheck) clearInterval(fallbackCheck);
       clearConnectionTimers();
       showToast(`Connection error: ${err.message || err}`, 'error');
     });
@@ -560,9 +548,9 @@
 
     peer.on('connection', (incomingConn) => {
       console.log('Incoming connection request from peer:', incomingConn.peer);
-      if (connection && connection.open) {
-        incomingConn.close();
-        return;
+      updateConnectionPill('connecting', 'Opponent Found...');
+      if (dom.hostStatusMsgText) {
+        dom.hostStatusMsgText.textContent = 'Opponent detected! Establishing P2P link...';
       }
       setupConnection(incomingConn);
     });
@@ -605,6 +593,8 @@
     dom.opponentColorBadge.textContent = 'White';
     dom.opponentAvatar.innerHTML = '<i class="fa-solid fa-crown text-gold-400"></i>';
 
+    // Hide host link box on guest side
+    if (dom.hostLinkBox) dom.hostLinkBox.classList.add('hidden');
     dom.joinDefaultContent.classList.add('hidden');
     dom.autoJoinState.classList.remove('hidden');
     dom.autoJoinHostText.textContent = `Host ID: ${cleanHostId.substring(0, 16)}...`;
@@ -619,30 +609,30 @@
     updateConnectionPill('connecting', 'Connecting...');
     showToast(`Connecting to Host Stage...`, 'info');
 
-    // Connection watchdog at 5 seconds and timeout at 12 seconds
+    // 6-second watchdog and 18-second timeout
     connectionWatchdog = setTimeout(() => {
       if (!isConnected) {
-        updateConnectionPill('connecting', 'Negotiating route...');
+        updateConnectionPill('connecting', 'Exchanging ICE...');
         if (dom.autoJoinDiagnosticMsg) {
-          dom.autoJoinDiagnosticMsg.textContent = 'Traversing NAT / firewall... attempting TURN relay connection.';
+          dom.autoJoinDiagnosticMsg.textContent = 'Establishing WebRTC data channel across network routers...';
           dom.autoJoinDiagnosticMsg.classList.remove('hidden');
         }
       }
-    }, 5000);
+    }, 6000);
 
     connectionTimeout = setTimeout(() => {
       if (!isConnected) {
         updateConnectionPill('disconnected', 'Connection Stalled');
         if (dom.autoJoinDiagnosticMsg) {
-          dom.autoJoinDiagnosticMsg.textContent = 'Connection taking longer than usual. Ensure the host has this page open and their screen is active.';
+          dom.autoJoinDiagnosticMsg.textContent = 'Connection stalled. Ensure the Host has not refreshed their page and keeps their tab active.';
           dom.autoJoinDiagnosticMsg.classList.remove('hidden');
         }
         if (dom.autoJoinStatusTitle) {
           dom.autoJoinStatusTitle.textContent = 'Connection Stalled';
         }
-        showToast('Connection stalled. Tap Retry or check with Host.', 'warning');
+        showToast('Connection stalled. Tap Retry or verify Host link.', 'warning');
       }
-    }, 12000);
+    }, 18000);
 
     if (peer && !peer.destroyed) {
       peer.destroy();
@@ -661,7 +651,7 @@
       console.log('Joiner PeerJS ready with ID:', myId, 'Connecting to host:', cleanHostId);
 
       if (dom.autoJoinStatusTitle) {
-        dom.autoJoinStatusTitle.textContent = 'Host Contacted! Opening channel...';
+        dom.autoJoinStatusTitle.textContent = 'Signaling Host... Handshake in progress.';
       }
 
       const conn = peer.connect(cleanHostId, {
