@@ -12,20 +12,28 @@
   // 1. CONFIGURATION & STATE
   // ==========================================================================
 
-  // High-reliability global STUN servers (Google + Cloudflare) with 5-second signaling keepalive
+  // STUN (for direct connections) + TURN relay (fallback when NAT/firewall blocks direct P2P).
+  // Without TURN, connections fail across mobile data, CGNAT, symmetric NAT and many school/office networks,
+  // which shows up as an endless "connecting" state. Open Relay is a free shared public TURN service;
+  // for production, swap in your own credentials (metered.ca, Twilio, Cloudflare, or self-hosted coturn).
   const PEER_CONFIG = {
-    debug: 1,
+    debug: 2,
     pingInterval: 5000,
     config: {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        {
+          urls: [
+            'turn:openrelay.metered.ca:80',
+            'turn:openrelay.metered.ca:443',
+            'turn:openrelay.metered.ca:443?transport=tcp'
+          ],
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
       ],
-      iceCandidatePoolSize: 10
+      iceCandidatePoolSize: 0
     }
   };
 
@@ -388,6 +396,20 @@
       try { connection.close(); } catch (e) {}
     }
     connection = conn;
+
+    // Log ICE state to the console to make connection failures diagnosable
+    const watchIce = setInterval(() => {
+      const pc = conn.peerConnection;
+      if (!pc) return;
+      clearInterval(watchIce);
+      pc.addEventListener('iceconnectionstatechange', () => {
+        console.log('ICE state:', pc.iceConnectionState);
+        if (pc.iceConnectionState === 'failed' && !isConnected) {
+          showToast('P2P route failed (network blocks direct link). Tap Retry.', 'error');
+        }
+      });
+    }, 100);
+    setTimeout(() => clearInterval(watchIce), 10000);
 
     let hasOpened = false;
     let fallbackCheck = null;
